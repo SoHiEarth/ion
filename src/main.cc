@@ -3,8 +3,23 @@
 // Code block
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <vector>
 
 int main(int argc, char **argv) {
+  if ((argc - 1) % 2 != 0) {
+    std::cout << "Warning: Number of arguments is not even" << std::endl;
+  }
+  std::vector<std::pair<std::string, std::string>> arguments;
+  for (int i = 1; i < argc; i += 2) {
+    if (argv[i] != nullptr) {
+      if (i + 1 < argc) {
+        if (argv[i + 1] != nullptr) {
+          arguments.push_back({argv[i], argv[i + 1]});
+        }
+      }
+    }
+  }
+
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
