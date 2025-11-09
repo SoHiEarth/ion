@@ -1,0 +1,21 @@
+{
+  "dependencies": [
+    "box2d",
+    "glad",
+    "glfw3",
+    "glm",
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "freetype",
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    },
+    "openal-soft",
+    "opengl",
+    "stb",
+    "tinyfiledialogs"
+  ]
+}
