@@ -1,0 +1,10 @@
+#pragma once
+#include <cstdint>
+enum ErrorCodes : std::uint16_t {
+  WINDOW_CREATE_FAIL = 1,
+  OPENGL_LOADER_FAIL = 2,
+  FILE_READ_FAIL = 3,
+  VERTEX_COMPILATION_FAIL = 4,
+  FRAGMENT_COMPILATION_FAIL = 5,
+  SHADER_PROGRAM_LINK_FAIL = 6
+};
