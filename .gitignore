@@ -2,3 +2,4 @@ build/
 CMakeUserPresets.json
 vcpkg_installed/
 .cache/
+imgui.ini
