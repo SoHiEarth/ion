@@ -1,10 +1,14 @@
 #pragma once
+#include "texture.h"
 #include <box2d/box2d.h>
 #include <glm/glm.hpp>
+
+enum class GetModelFlags { DEFAULT, IGNORE_LAYER };
 
 class Transform {
 private:
   b2BodyId body_id;
+  Texture texture;
 
 public:
   glm::vec2 position = glm::vec2(0.0f);
@@ -14,7 +18,8 @@ public:
   bool enable_physics = false;
 
   Transform(b2WorldId world);
+  Texture &GetTexture();
   void UpdatePhysics();
   void RenderInspector(int id);
-  glm::mat4 GetModel();
+  glm::mat4 GetModel(GetModelFlags flags = GetModelFlags::DEFAULT);
 };

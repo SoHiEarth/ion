@@ -15,6 +15,7 @@ target_sources(ion PRIVATE
   src/main.cc
   src/shader.cc
   src/transform.cc
+  src/texture.cc
 )
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
