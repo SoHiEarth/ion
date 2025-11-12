@@ -4,8 +4,10 @@
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <vector>
 
 Transform::Transform(b2WorldId world) {
+  if (B2_IS_NULL(world)) return;
   b2BodyDef body_def = b2DefaultBodyDef();
   body_def.type = b2_dynamicBody;
   body_def.position = b2Vec2(position.x, position.y);
@@ -32,9 +34,10 @@ void Transform::UpdatePhysics() {
   rotation = b2Rot_GetAngle(b2Body_GetRotation(body_id));
 }
 
-void Transform::RenderInspector(int id) {
+void Transform::RenderInspector(int id, b2WorldId world) {
   ImGui::Begin(std::format("Transform##{}", id).c_str());
   ImGui::Checkbox("Enable Physics", &enable_physics);
+  ImGui::Checkbox("Lock Camera", &lock_camera);
   glm::vec2 old_position = position;
   ImGui::DragFloat2("Position", glm::value_ptr(position), 0.1F);
   if (position != old_position) {
@@ -43,7 +46,28 @@ void Transform::RenderInspector(int id) {
     b2Body_SetAwake(body_id, true);
   }
   ImGui::DragInt("Layer", &layer);
-  ImGui::DragFloat2("Scale", glm::value_ptr(scale), 0.1F);
+  if (ImGui::DragFloat2("Scale", glm::value_ptr(scale), 0.1F)) {
+		if (scale.x <= 0.0F)
+      scale.x = 0.1F;
+		if (scale.y <= 0.0F)
+			scale.y = 0.1F;
+    const int count = b2Body_GetShapeCount(body_id);
+    std::vector<b2ShapeId> shapes(count);
+		b2Body_GetShapes(body_id, shapes.data(), count);
+    for (int i = 0; i < count; i++) {
+      if (shapes[i].index1 != -1) {
+        b2DestroyShape(shapes[i], false);
+      } else {
+        break;
+      }
+		}
+
+    b2Polygon new_shape = b2MakeBox(scale.x * 0.5F, scale.y * 0.5F);
+    b2ShapeDef shape_def = b2DefaultShapeDef();
+    shape_def.density = 1.0F;
+    shape_def.material.friction = 0.3F;
+    b2CreatePolygonShape(body_id, &shape_def, &new_shape);
+  }
 
   float rotation_deg = glm::degrees(rotation);
   if (ImGui::DragFloat("Rotation", &rotation_deg, 1.0f)) {

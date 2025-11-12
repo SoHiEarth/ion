@@ -16,10 +16,11 @@ public:
   glm::vec2 scale = glm::vec2(1.0f);
   float rotation = 0.0f;
   bool enable_physics = false;
+  bool lock_camera = false;
 
   Transform(b2WorldId world);
   Texture &GetTexture();
   void UpdatePhysics();
-  void RenderInspector(int id);
+  void RenderInspector(int id, b2WorldId world);
   glm::mat4 GetModel(GetModelFlags flags = GetModelFlags::DEFAULT);
 };
