@@ -1,3 +1,4 @@
+#include "physics.h"
 #include "render.h"
 #include "shader.h"
 #include "sprites.h"
@@ -17,6 +18,7 @@
 
 void Draw(Shader &shader, GetModelFlags model_flags = GetModelFlags::DEFAULT);
 RenderSystem render;
+PhysicsSystem physics;
 
 std::vector<float> vertices = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
                                0.0f, 1.0f,  0.0f, -0.5f, -0.5f, 0.0f, 0.0f,
@@ -52,20 +54,19 @@ int main(int argc, char **argv) {
   data_desc.indices = indices;
   auto data = render.CreateData(data_desc);
 
-  b2WorldDef world_def = b2DefaultWorldDef();
-  world_def.gravity = b2Vec2(0.0F, -1.0F);
-  auto physics_world = b2CreateWorld(&world_def);
+  physics.Init();
 
   while (!glfwWindowShouldClose(render.GetWindow())) {
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    b2World_Step(physics_world, 1.0F / 60.0F, 6);
+    physics.Update();
     world.Update();
     world.sprites.Inspector();
     ImGui::Begin("Control Panel");
     if (ImGui::Button("Add")) {
+      auto physics_world = physics.GetWorld();
       world.sprites.New(Transform(physics_world), Texture());
     }
     ImGui::SeparatorText("Assets");
@@ -115,7 +116,7 @@ int main(int argc, char **argv) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     render.Render();
   }
-  b2DestroyWorld(physics_world);
+  physics.Quit();
   render.DestroyData(data);
   render.DestroyShader(shader);
   render.Quit();
