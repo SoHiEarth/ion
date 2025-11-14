@@ -2,8 +2,10 @@
 #include <box2d/box2d.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <vector>
 
 Transform::Transform(b2WorldId world) {
+  if (B2_IS_NULL(world)) return;
   b2BodyDef body_def = b2DefaultBodyDef();
   body_def.type = b2_dynamicBody;
   body_def.position = b2Vec2(position.x, position.y);

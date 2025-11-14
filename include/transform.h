@@ -11,6 +11,7 @@ struct Transform {
   glm::vec2 scale = glm::vec2(1.0f);
   float rotation = 0.0f;
   bool enable_physics = false;
+  bool lock_camera = false;
 
   Transform(b2WorldId world);
   void UpdatePhysics();

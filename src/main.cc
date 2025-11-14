@@ -37,7 +37,9 @@ unsigned int indices[] = {0, 1, 3, 1, 2, 3};
 std::vector<Texture> textures;
 bool render_colliders = false;
 int screen_width = 800, screen_height = 600;
-glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, -3.0f);
+bool use_perspective = true;
+bool lock_y_axis = false;
+glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
 
 int main(int argc, char **argv) {
   render.Init();
@@ -67,7 +69,6 @@ int main(int argc, char **argv) {
 
   while (!glfwWindowShouldClose(render.GetWindow())) {
     glfwPollEvents();
-    b2World_Step(world, 1.0F / 60.0F, 6);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -98,7 +99,9 @@ int main(int argc, char **argv) {
       ImGui::PopID();
     }
     ImGui::Checkbox("Render Colliders", &render_colliders);
+	  ImGui::Checkbox("Use Perspective", &use_perspective);
     ImGui::DragFloat3("Camera Position", glm::value_ptr(camera_position), 0.1f);
+    ImGui::Checkbox("Lock camera-y", &lock_y_axis);
     ImGui::End();
     ImGui::Render();
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -121,7 +124,8 @@ int main(int argc, char **argv) {
     }
     glBindVertexArray(0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(render.GetWindow());
+    glfwSwapBuffers(window);
+    b2World_Step(world, 1.0F / 60.0F, 6);
   }
   glDeleteVertexArrays(1, &vertex_attrib);
   glDeleteBuffers(1, &vertex_buffer);
