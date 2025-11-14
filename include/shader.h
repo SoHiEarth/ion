@@ -8,5 +8,6 @@ private:
 public:
   void Use();
   unsigned int GetProgram();
+  template <typename T> int SetUniform(std::string_view name, T value);
   explicit Shader(std::string_view vertex_path, std::string_view fragment_path);
 };

@@ -4,12 +4,21 @@
 #include <array>
 #include <fstream>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
 
 void Shader::Use() { glUseProgram(program); }
 unsigned int Shader::GetProgram() { return program; }
+
+template <>
+int Shader::SetUniform<glm::mat4>(std::string_view name, glm::mat4 value) {
+  auto loc = glGetUniformLocation(program, name.data());
+  glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
+  return 0;
+}
 
 std::string _ShaderInternalReadFile(std::string_view path) {
   std::string data;

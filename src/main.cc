@@ -1,8 +1,9 @@
 // Code block
 #include <glad/glad.h>
 // Code block
-#include "error_code.h"
+#include "render.h"
 #include "shader.h"
+#include "sprites.h"
 #include "texture.h"
 #include "transform.h"
 #include <GLFW/glfw3.h>
@@ -13,9 +14,20 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include <iostream>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
+
+class Scene {
+public:
+  Sprites sprites;
+  void Draw(Shader &shader, GetModelFlags model_flags = GetModelFlags::DEFAULT);
+};
+Scene scene;
+RenderSystem render;
+
+void Scene::Draw(Shader &shader, GetModelFlags model_flags) {
+  sprites.Draw(shader, model_flags);
+}
 
 float vertices[] = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
                     0.0f, 1.0f,  0.0f, -0.5f, -0.5f, 0.0f, 0.0f,
@@ -23,43 +35,12 @@ float vertices[] = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
 
 unsigned int indices[] = {0, 1, 3, 1, 2, 3};
 std::vector<Texture> textures;
-std::vector<Transform> transforms;
 bool render_colliders = false;
 int screen_width = 800, screen_height = 600;
 glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, -3.0f);
 
 int main(int argc, char **argv) {
-  glfwInit();
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-  auto window =
-      glfwCreateWindow(screen_width, screen_height, "ion", NULL, NULL);
-  if (window == nullptr) {
-    std::cerr << WINDOW_CREATE_FAIL << std::endl;
-    glfwTerminate();
-    return -1;
-  }
-  glfwMakeContextCurrent(window);
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init("#version 150");
-  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-    std::cerr << OPENGL_LOADER_FAIL << std::endl;
-    return -1;
-  }
-  glfwSetFramebufferSizeCallback(window, [](GLFWwindow *, int w, int h) {
-    glViewport(0, 0, w, h);
-    screen_width = w;
-    screen_height = h;
-  });
-  glEnable(GL_DEPTH_TEST);
-  glViewport(0, 0, screen_width, screen_height);
-
+  render.Init();
   Shader shader = Shader("assets/sprite.vert", "assets/sprite.frag");
 
   unsigned int vertex_attrib, vertex_buffer, element_buffer;
@@ -84,19 +65,19 @@ int main(int argc, char **argv) {
   world_def.gravity = b2Vec2(0.0F, -1.0F);
   auto world = b2CreateWorld(&world_def);
 
-  while (!glfwWindowShouldClose(window)) {
+  while (!glfwWindowShouldClose(render.GetWindow())) {
     glfwPollEvents();
     b2World_Step(world, 1.0F / 60.0F, 6);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    for (int i = 0; i < transforms.size(); i++) {
-      transforms[i].UpdatePhysics();
-      transforms[i].RenderInspector(i);
+    for (int i = 0; i < scene.sprites.transforms.size(); i++) {
+      scene.sprites.transforms[i].UpdatePhysics();
     }
+    scene.sprites.Inspector();
     ImGui::Begin("Control Panel");
     if (ImGui::Button("Add")) {
-      transforms.push_back(Transform(world));
+      scene.sprites.New(Transform(world), Texture());
     }
     ImGui::SeparatorText("Assets");
     if (ImGui::Button("Load")) {
@@ -129,42 +110,23 @@ int main(int argc, char **argv) {
     glm::mat4 proj = glm::perspective(
         glm::radians(45.0f), (float)screen_width / (float)screen_height, 0.1f,
         100.0f);
-    auto view_loc = glGetUniformLocation(shader.GetProgram(), "view"),
-         proj_loc = glGetUniformLocation(shader.GetProgram(), "projection");
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, glm::value_ptr(proj));
-
+    shader.SetUniform("view", view);
+    shader.SetUniform("projection", proj);
     glBindVertexArray(vertex_attrib);
-    for (auto &transform : transforms) {
-      auto model = transform.GetModel();
-      auto model_loc = glGetUniformLocation(shader.GetProgram(), "model");
-      glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model));
-      auto texture = transform.GetTexture();
-      glBindTexture(GL_TEXTURE_2D, texture.texture);
-      shader.Use();
-      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-      glBindTexture(GL_TEXTURE_2D, 0);
-    }
+    scene.Draw(shader);
     if (render_colliders) {
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      for (auto &transform : transforms) {
-        auto model = transform.GetModel(GetModelFlags::IGNORE_LAYER);
-        auto model_loc = glGetUniformLocation(shader.GetProgram(), "model");
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(model));
-        shader.Use();
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-      }
+      scene.Draw(shader, GetModelFlags::IGNORE_Z);
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     glBindVertexArray(0);
-
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(render.GetWindow());
   }
   glDeleteVertexArrays(1, &vertex_attrib);
   glDeleteBuffers(1, &vertex_buffer);
   glDeleteProgram(shader.GetProgram());
-  glfwDestroyWindow(window);
+  glfwDestroyWindow(render.GetWindow());
   glfwTerminate();
   return 0;
 }

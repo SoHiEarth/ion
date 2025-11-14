@@ -5,7 +5,6 @@ find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(ImGui CONFIG REQUIRED)
-find_package(OpenAL CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
@@ -16,6 +15,8 @@ target_sources(ion PRIVATE
   src/shader.cc
   src/transform.cc
   src/texture.cc
+  src/sprites.cc
+  src/render.cc
 )
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
@@ -27,7 +28,6 @@ target_link_libraries(ion PRIVATE
     glfw
     glm::glm
     imgui::imgui
-    OpenAL::OpenAL
     OpenGL::GL
     tinyfiledialogs::tinyfiledialogs
 )
