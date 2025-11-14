@@ -10,4 +10,5 @@ struct Sprites {
   void New(Transform transform, Texture texture);
   void Draw(Shader &shader, GetModelFlags model_flags);
   void Inspector();
+  void Update();
 };

@@ -61,3 +61,23 @@ void Sprites::Inspector() {
     ImGui::End();
   }
 }
+
+void Sprites::Update() {
+  assert(transforms.size() == textures.size());
+  for (int i = 0; i < transforms.size(); i++) {
+    if (!transforms[i].enable_physics) {
+      b2Body_SetType(transforms[i].body_id, b2_staticBody);
+      return;
+    }
+
+    if (b2Body_GetType(transforms[i].body_id) == b2_staticBody) {
+      b2Body_SetType(transforms[i].body_id, b2_dynamicBody);
+    }
+
+    auto physics_position = b2Body_GetPosition(transforms[i].body_id);
+    transforms[i].position = {physics_position.x, physics_position.y,
+                              transforms[i].position.z};
+    transforms[i].rotation =
+        b2Rot_GetAngle(b2Body_GetRotation(transforms[i].body_id));
+  }
+}

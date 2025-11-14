@@ -2,10 +2,10 @@
 #include <box2d/box2d.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
-#include <vector>
 
 Transform::Transform(b2WorldId world) {
-  if (B2_IS_NULL(world)) return;
+  if (B2_IS_NULL(world))
+    return;
   b2BodyDef body_def = b2DefaultBodyDef();
   body_def.type = b2_dynamicBody;
   body_def.position = b2Vec2(position.x, position.y);
@@ -15,21 +15,6 @@ Transform::Transform(b2WorldId world) {
   shape_def.density = 1.0F;
   shape_def.material.friction = 0.3F;
   b2CreatePolygonShape(body_id, &shape_def, &shape);
-}
-
-void Transform::UpdatePhysics() {
-  if (!enable_physics) {
-    b2Body_SetType(body_id, b2_staticBody);
-    return;
-  }
-
-  if (b2Body_GetType(body_id) == b2_staticBody) {
-    b2Body_SetType(body_id, b2_dynamicBody);
-  }
-
-  auto physics_position = b2Body_GetPosition(body_id);
-  position = {physics_position.x, physics_position.y, position.z};
-  rotation = b2Rot_GetAngle(b2Body_GetRotation(body_id));
 }
 
 glm::mat4 Transform::GetModel(GetModelFlags flags) const {

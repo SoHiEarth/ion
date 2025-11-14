@@ -38,7 +38,6 @@ std::vector<Texture> textures;
 bool render_colliders = false;
 int screen_width = 800, screen_height = 600;
 bool use_perspective = true;
-bool lock_y_axis = false;
 glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
 
 int main(int argc, char **argv) {
@@ -72,9 +71,7 @@ int main(int argc, char **argv) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    for (int i = 0; i < scene.sprites.transforms.size(); i++) {
-      scene.sprites.transforms[i].UpdatePhysics();
-    }
+    scene.sprites.Update();
     scene.sprites.Inspector();
     ImGui::Begin("Control Panel");
     if (ImGui::Button("Add")) {
@@ -99,20 +96,23 @@ int main(int argc, char **argv) {
       ImGui::PopID();
     }
     ImGui::Checkbox("Render Colliders", &render_colliders);
-	  ImGui::Checkbox("Use Perspective", &use_perspective);
+    ImGui::Checkbox("Use Perspective", &use_perspective);
     ImGui::DragFloat3("Camera Position", glm::value_ptr(camera_position), 0.1f);
-    ImGui::Checkbox("Lock camera-y", &lock_y_axis);
     ImGui::End();
     ImGui::Render();
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), camera_position);
-    /*glm::mat4 proj = glm::ortho(
-        -(float)screen_width / 2, (float)screen_width / 2,
-        -(float)screen_height / 2, (float)screen_height / 2, 0.1f, 100.0f); */
-    glm::mat4 proj = glm::perspective(
-        glm::radians(45.0f), (float)screen_width / (float)screen_height, 0.1f,
-        100.0f);
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), -camera_position);
+    glm::mat4 proj = glm::mat4(1.0f);
+    if (!use_perspective) {
+      proj = glm::ortho(-(float)screen_width / 2, (float)screen_width / 2,
+                        -(float)screen_height / 2, (float)screen_height / 2,
+                        0.1f, 100.0f);
+    } else {
+      proj = glm::perspective(glm::radians(45.0f),
+                              (float)screen_width / (float)screen_height, 0.1f,
+                              100.0f);
+    }
     shader.SetUniform("view", view);
     shader.SetUniform("projection", proj);
     glBindVertexArray(vertex_attrib);
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
     }
     glBindVertexArray(0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(render.GetWindow());
     b2World_Step(world, 1.0F / 60.0F, 6);
   }
   glDeleteVertexArrays(1, &vertex_attrib);
