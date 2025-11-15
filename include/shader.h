@@ -1,7 +1,7 @@
 #pragma once
 #include <string_view>
 
-class Shader {
+struct Shader {
 private:
   unsigned int program;
 

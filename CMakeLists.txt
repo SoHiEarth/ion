@@ -7,7 +7,6 @@ find_package(glm CONFIG REQUIRED)
 find_package(ImGui CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
-find_package(stduuid CONFIG REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 add_executable(ion)
 target_compile_features(ion PRIVATE cxx_std_20)
@@ -15,7 +14,6 @@ target_sources(ion PRIVATE
   src/assets.cc
   src/main.cc
   src/shader.cc
-  src/transform.cc
   src/texture.cc
   src/sprites.cc
   src/render.cc
@@ -33,6 +31,5 @@ target_link_libraries(ion PRIVATE
     glm::glm
     imgui::imgui
     OpenGL::GL
-    stduuid
     tinyfiledialogs::tinyfiledialogs
 )

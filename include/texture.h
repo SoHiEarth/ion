@@ -1,6 +1,6 @@
 #pragma once
 #include <string_view>
-class Texture {
+struct Texture {
 public:
   unsigned int texture = 0;
   void Use();

@@ -61,8 +61,7 @@ template <> Shader AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
     shaders.push_back(shader);
     return shader;
   } else {
-    auto shader =
-        Shader(manifest_info["vertex_path"], manifest_info["fragment_path"]);
+    auto shader = Shader(manifest_info["vertex_path"], manifest_info["fragment_path"]);
     shaders.push_back(shader);
     return shader;
   }

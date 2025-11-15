@@ -1,2 +1,3 @@
-vertex_path:assets/sprite.vert
-fragment_path:assets/sprite.frag
+relative:true
+vertex_path:/sprite.vert
+fragment_path:/sprite.frag

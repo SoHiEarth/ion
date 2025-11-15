@@ -1,7 +1,28 @@
 #include "world.h"
 
-void World::Update() { sprites.Update(); }
+template <> std::map<EntityID, Transform>& World::GetComponentSet<Transform>() {
+  return transforms;
+}
 
-void World::Draw(Shader &shader, GetModelFlags model_flags) {
-  sprites.Draw(shader, model_flags);
+template <> std::map<EntityID, Renderable>& World::GetComponentSet<Renderable>() {
+  return renderables;
+}
+
+template <> std::map<EntityID, PhysicsBody>& World::GetComponentSet<PhysicsBody>() {
+  return physics_bodies;
+}
+
+template <> std::map<EntityID, Camera>& World::GetComponentSet<Camera>() {
+  return cameras;
+}
+
+EntityID World::CreateEntity() {
+  return next_id++;
+}
+
+void World::DestroyEntity(EntityID entity) {
+  transforms.erase(entity);
+  renderables.erase(entity);
+  physics_bodies.erase(entity);
+  cameras.erase(entity);
 }

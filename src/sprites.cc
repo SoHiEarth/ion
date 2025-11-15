@@ -1,3 +1,4 @@
+/*
 #include "sprites.h"
 #include "render.h"
 #include "shader.h"
@@ -81,3 +82,5 @@ void Sprites::Update() {
         b2Rot_GetAngle(b2Body_GetRotation(transforms[i].body_id));
   }
 }
+
+*/

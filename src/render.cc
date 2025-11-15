@@ -5,8 +5,10 @@
 #include "render.h"
 #include "shader.h"
 #include "texture.h"
-#include "transform.h"
+#include "world.h"
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -61,13 +63,6 @@ void RenderSystem::SetMode(RenderMode mode) {
     break;
   }
 }
-void RenderSystem::RenderSprite(Transform transform, GetModelFlags model_flags,
-                                Texture texture, Shader shader) {
-  auto model = transform.GetModel(model_flags);
-  shader.SetUniform("model", model);
-  glBindTexture(GL_TEXTURE_2D, texture.texture);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-}
 
 GLenum GetTypeEnum(DataType type) {
   switch (type) {
@@ -86,7 +81,7 @@ GLenum GetTypeEnum(DataType type) {
   }
 }
 
-GPUData RenderSystem::CreateData(DataDescriptor data_desc) {
+GPUData RenderSystem::CreateData(DataDescriptor& data_desc) {
   GPUData data;
   data.element_enabled = data_desc.element_enabled;
   glGenVertexArrays(1, &data.vertex_attrib);
@@ -105,7 +100,7 @@ GPUData RenderSystem::CreateData(DataDescriptor data_desc) {
                  data_desc.indices.data(), GL_STATIC_DRAW);
   }
   for (int i = 0; i < data_desc.pointers.size(); i++) {
-    auto pointer_data = data_desc.pointers[i];
+    auto& pointer_data = data_desc.pointers[i];
     glVertexAttribPointer(i, pointer_data.size, GetTypeEnum(pointer_data.type),
                           pointer_data.normalized, pointer_data.stride,
                           pointer_data.pointer);
@@ -115,7 +110,7 @@ GPUData RenderSystem::CreateData(DataDescriptor data_desc) {
   return data;
 }
 
-void RenderSystem::DestroyData(GPUData data) {
+void RenderSystem::DestroyData(GPUData& data) {
   glDeleteVertexArrays(1, &data.vertex_attrib);
   glDeleteBuffers(1, &data.vertex_buffer);
   if (data.element_enabled) {
@@ -123,7 +118,7 @@ void RenderSystem::DestroyData(GPUData data) {
   }
 }
 
-void RenderSystem::BindData(GPUData data) {
+void RenderSystem::BindData(GPUData& data) {
   glBindVertexArray(data.vertex_attrib);
   glBindBuffer(GL_ARRAY_BUFFER, data.vertex_buffer);
   if (data.element_enabled) {
@@ -155,4 +150,46 @@ int RenderSystem::Quit() {
   glfwDestroyWindow(window);
   glfwTerminate();
   return 0;
+}
+
+glm::mat4 GetModelFromTransform(Transform transform) {
+  auto model = glm::mat4(1.0f);
+  model = glm::translate(model, transform.position);
+  model = glm::rotate(model, transform.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::scale(model, glm::vec3(transform.scale, 1));
+  return model;
+}
+
+void RenderSystem::DrawWorld(World& world, RenderSystem& render_sys) {
+  auto& all_cameras = world.GetComponentSet<Camera>();
+  auto& all_transforms = world.GetComponentSet<Transform>();
+  for (auto& [entity_id, camera] : all_cameras) {
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::translate(view, -camera.position);
+    glm::mat4 projection;
+    if (camera.mode == ProjectionMode::PERSPECTIVE) {
+      projection = glm::perspective(
+          glm::radians(45.0f),
+          render_sys.GetWindowSize().x / render_sys.GetWindowSize().y, 0.1f,
+          100.0f);
+    } else {
+      float ortho_scale = 10.0f;
+      projection = glm::ortho(
+          -ortho_scale * (render_sys.GetWindowSize().x / render_sys.GetWindowSize().y),
+          ortho_scale * (render_sys.GetWindowSize().x / render_sys.GetWindowSize().y),
+          -ortho_scale, ortho_scale, 0.1f, 100.0f);
+    }
+    for (auto& [entity_id, transform] : all_transforms) {
+      auto renderable = world.GetComponent<Renderable>(entity_id);
+      if (renderable) {
+        renderable->shader.Use();
+        renderable->shader.SetUniform("view", view);
+        renderable->shader.SetUniform("projection", projection);
+        auto model = GetModelFromTransform(transform);
+        renderable->shader.SetUniform("model", model);
+        glBindTexture(GL_TEXTURE_2D, renderable->texture.texture);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+      }
+    }
+  }
 }

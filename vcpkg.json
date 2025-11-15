@@ -1,6 +1,5 @@
 {
   "dependencies": [
-    "stduuid",
     "box2d",
     "glad",
     "glfw3",
