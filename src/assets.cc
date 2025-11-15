@@ -9,8 +9,9 @@
 
 static std::string Trim(std::string s) {
   auto is_space = [](unsigned char c) { return std::isspace(c); };
-  s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), is_space));
-  s.erase(std::find_if_not(s.rbegin(), s.rend(), is_space).base(), s.end());
+  s.erase(s.begin(), std::ranges::find_if_not(s.begin(), s.end(), is_space));
+  s.erase(std::ranges::find_if_not(s.rbegin(), s.rend(), is_space).base(),
+          s.end());
   return s;
 }
 
@@ -40,7 +41,8 @@ std::map<std::string, std::string> ParseManifest(std::string_view path) {
 template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
-    auto directory = std::filesystem::path(manifest).parent_path().generic_string();
+    auto directory =
+        std::filesystem::path(manifest).parent_path().generic_string();
     auto texture = Texture(directory + manifest_info["path"]);
     textures.push_back(texture);
     return texture;
@@ -54,13 +56,15 @@ template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
 template <> Shader AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
-    auto directory = std::filesystem::path(manifest).parent_path().generic_string();
+    auto directory =
+        std::filesystem::path(manifest).parent_path().generic_string();
     auto shader = Shader(directory + manifest_info["vertex_path"],
                          directory + manifest_info["fragment_path"]);
     shaders.push_back(shader);
     return shader;
   } else {
-    auto shader = Shader(manifest_info["vertex_path"], manifest_info["fragment_path"]);
+    auto shader =
+        Shader(manifest_info["vertex_path"], manifest_info["fragment_path"]);
     shaders.push_back(shader);
     return shader;
   }
