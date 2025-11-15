@@ -17,6 +17,8 @@ target_sources(ion PRIVATE
   src/texture.cc
   src/sprites.cc
   src/render.cc
+  src/physics.cc
+  src/world.cc
 )
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
