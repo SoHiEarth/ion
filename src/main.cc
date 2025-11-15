@@ -1,3 +1,5 @@
+#include "assets.h"
+#include "camera.h"
 #include "physics.h"
 #include "render.h"
 #include "shader.h"
@@ -13,27 +15,24 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
 
 RenderSystem render;
 PhysicsSystem physics;
-
+AssetSystem assets;
+Camera camera;
+static const char *proj_names[] = {"Orthographic", "Perspective"};
 std::vector<float> vertices = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
                                0.0f, 1.0f,  0.0f, -0.5f, -0.5f, 0.0f, 0.0f,
                                0.0f, -0.5f, 0.5f, 0.0f,  0.0f,  1.0f};
-
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
-std::vector<Texture> textures;
 bool render_colliders = false;
-bool use_perspective = true;
-glm::vec3 camera_position = glm::vec3(0.0f, 0.0f, 3.0f);
 
 int main(int argc, char **argv) {
-  World world(render);
+  auto world = World(render);
 
   render.Init();
-  Shader shader = Shader("assets/sprite.vert", "assets/sprite.frag");
+  auto shader = assets.LoadAsset<Shader>("assets/sprite_shader.manifest");
   AttributePointer position_pointer;
   position_pointer.size = 3;
   position_pointer.type = DataType::FLOAT;
@@ -63,39 +62,26 @@ int main(int argc, char **argv) {
     physics.Update();
     world.Update();
     world.sprites.Inspector();
+    assets.Inspector();
     ImGui::Begin("Control Panel");
     if (ImGui::Button("Add")) {
       auto physics_world = physics.GetWorld();
       world.sprites.New(Transform(physics_world), Texture());
     }
-    ImGui::SeparatorText("Assets");
-    if (ImGui::Button("Load")) {
-      const auto file_char = tinyfd_openFileDialog("Open Image", nullptr, 0,
-                                                   nullptr, nullptr, false);
-      if (file_char) {
-        textures.push_back(Texture(file_char));
-      }
-    }
-    for (int i = 0; i < textures.size(); i++) {
-      ImGui::PushID(i);
-      ImGui::Image(textures[i].texture, ImVec2(100, 100));
-      if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-        ImGui::SetDragDropPayload("TEXTURE_ASSET", &textures[i],
-                                  sizeof(Texture));
-        ImGui::EndDragDropSource();
-      }
-      ImGui::PopID();
-    }
+
     ImGui::Checkbox("Render Colliders", &render_colliders);
-    ImGui::Checkbox("Use Perspective", &use_perspective);
-    ImGui::DragFloat3("Camera Position", glm::value_ptr(camera_position), 0.1f);
+    int current_mode = static_cast<int>(camera.mode);
+    if (ImGui::Combo("Projection Mode", &current_mode, proj_names, 2)) {
+      camera.mode = static_cast<ProjectionMode>(current_mode);
+    }
+    ImGui::DragFloat3("Camera Position", glm::value_ptr(camera.position), 0.1f);
     ImGui::End();
     ImGui::Render();
     render.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), -camera_position);
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), -camera.position);
     glm::mat4 proj = glm::mat4(1.0f);
     auto window_size = render.GetWindowSize();
-    if (!use_perspective) {
+    if (camera.mode == ProjectionMode::PERSPECTIVE) {
       proj = glm::ortho(-window_size.x / 2, window_size.x / 2,
                         -window_size.y / 2, window_size.y / 2, 0.1f, 100.0f);
     } else {
