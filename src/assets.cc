@@ -41,7 +41,6 @@ template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
     auto directory = std::filesystem::path(manifest).parent_path().generic_string();
-    printf("%s\n", directory.c_str());
     auto texture = Texture(directory + manifest_info["path"]);
     textures.push_back(texture);
     return texture;
