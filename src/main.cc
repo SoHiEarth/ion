@@ -16,7 +16,6 @@
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
 
-void Draw(Shader &shader, GetModelFlags model_flags = GetModelFlags::DEFAULT);
 RenderSystem render;
 PhysicsSystem physics;
 

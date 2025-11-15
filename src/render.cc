@@ -1,5 +1,4 @@
 // dependency
-#include <box2d/math_functions.h>
 #include <glad/glad.h>
 // end
 #include "error_code.h"
