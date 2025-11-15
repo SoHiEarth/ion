@@ -5,7 +5,7 @@
 
 class Texture;
 class Shader;
-class GLFWwindow;
+struct GLFWwindow;
 enum class DataType { INT, UNSIGNED_INT, FLOAT };
 enum class RenderMode { FILL, LINE };
 struct AttributePointer {

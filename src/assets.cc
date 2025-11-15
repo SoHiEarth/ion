@@ -40,7 +40,7 @@ std::map<std::string, std::string> ParseManifest(std::string_view path) {
 template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
-    auto directory = std::string(std::filesystem::path(manifest).parent_path());
+    auto directory = std::filesystem::path(manifest).parent_path().generic_string();
     printf("%s\n", directory.c_str());
     auto texture = Texture(directory + manifest_info["path"]);
     textures.push_back(texture);
@@ -55,7 +55,7 @@ template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
 template <> Shader AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
-    auto directory = std::string(std::filesystem::path(manifest).parent_path());
+    auto directory = std::filesystem::path(manifest).parent_path().generic_string();
     auto shader = Shader(directory + manifest_info["vertex_path"],
                          directory + manifest_info["fragment_path"]);
     shaders.push_back(shader);
