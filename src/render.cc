@@ -1,6 +1,7 @@
 // dependency
 #include <glad/glad.h>
 // end
+#include "component.h"
 #include "error_code.h"
 #include "render.h"
 #include "shader.h"
@@ -13,6 +14,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <iostream>
+#include <stb_image.h>
 
 glm::vec2 window_size = glm::vec2(800, 600);
 
@@ -81,20 +83,20 @@ GLenum GetTypeEnum(DataType type) {
   }
 }
 
-GPUData RenderSystem::CreateData(DataDescriptor& data_desc) {
-  GPUData data;
-  data.element_enabled = data_desc.element_enabled;
-  glGenVertexArrays(1, &data.vertex_attrib);
-  glGenBuffers(1, &data.vertex_buffer);
-  if (data.element_enabled) {
-    glGenBuffers(1, &data.element_buffer);
+std::shared_ptr<GPUData> RenderSystem::CreateData(DataDescriptor& data_desc) {
+  auto data = std::make_shared<GPUData>();
+  data->element_enabled = data_desc.element_enabled;
+  glGenVertexArrays(1, &data->vertex_attrib);
+  glGenBuffers(1, &data->vertex_buffer);
+  if (data->element_enabled) {
+    glGenBuffers(1, &data->element_buffer);
   }
-  glBindVertexArray(data.vertex_attrib);
-  glBindBuffer(GL_ARRAY_BUFFER, data.vertex_buffer);
+  glBindVertexArray(data->vertex_attrib);
+  glBindBuffer(GL_ARRAY_BUFFER, data->vertex_buffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(float) * data_desc.vertices.size(),
                data_desc.vertices.data(), GL_STATIC_DRAW);
-  if (data.element_enabled) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.element_buffer);
+  if (data->element_enabled) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->element_buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  sizeof(unsigned int) * data_desc.indices.size(),
                  data_desc.indices.data(), GL_STATIC_DRAW);
@@ -110,19 +112,19 @@ GPUData RenderSystem::CreateData(DataDescriptor& data_desc) {
   return data;
 }
 
-void RenderSystem::DestroyData(GPUData& data) {
-  glDeleteVertexArrays(1, &data.vertex_attrib);
-  glDeleteBuffers(1, &data.vertex_buffer);
-  if (data.element_enabled) {
-    glDeleteBuffers(1, &data.element_buffer);
+void RenderSystem::DestroyData(std::shared_ptr<GPUData> data) {
+  glDeleteVertexArrays(1, &data->vertex_attrib);
+  glDeleteBuffers(1, &data->vertex_buffer);
+  if (data->element_enabled) {
+    glDeleteBuffers(1, &data->element_buffer);
   }
 }
 
-void RenderSystem::BindData(GPUData& data) {
-  glBindVertexArray(data.vertex_attrib);
-  glBindBuffer(GL_ARRAY_BUFFER, data.vertex_buffer);
-  if (data.element_enabled) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.element_buffer);
+void RenderSystem::BindData(std::shared_ptr<GPUData> data) {
+  glBindVertexArray(data->vertex_attrib);
+  glBindBuffer(GL_ARRAY_BUFFER, data->vertex_buffer);
+  if (data->element_enabled) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->element_buffer);
   }
 }
 
@@ -132,8 +134,9 @@ void RenderSystem::UnbindData() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void RenderSystem::DestroyShader(Shader &shader) {
-  glDeleteProgram(shader.GetProgram());
+void RenderSystem::DestroyShader(std::shared_ptr<Shader> shader) {
+  glDeleteProgram(shader->GetProgram());
+  shader.reset();
 }
 
 void RenderSystem::Clear(glm::vec4 color) {
@@ -182,14 +185,30 @@ void RenderSystem::DrawWorld(World& world, RenderSystem& render_sys) {
     for (auto& [entity_id, transform] : all_transforms) {
       auto renderable = world.GetComponent<Renderable>(entity_id);
       if (renderable) {
-        renderable->shader.Use();
-        renderable->shader.SetUniform("view", view);
-        renderable->shader.SetUniform("projection", projection);
+        BindData(renderable->data);
+        renderable->shader->Use();
+        renderable->shader->SetUniform("view", view);
+        renderable->shader->SetUniform("projection", projection);
         auto model = GetModelFromTransform(transform);
-        renderable->shader.SetUniform("model", model);
-        glBindTexture(GL_TEXTURE_2D, renderable->texture.texture);
+        renderable->shader->SetUniform("model", model);
+        glBindTexture(GL_TEXTURE_2D, renderable->texture->texture);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        UnbindData();
       }
     }
   }
+}
+
+unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
+  unsigned int texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  if (texture_info.data) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_info.width, texture_info.height, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, texture_info.data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    std::cerr << TEXTURE_LOAD_FAIL << std::endl;
+  }
+  return texture;
 }

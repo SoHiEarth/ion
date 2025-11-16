@@ -1,11 +1,15 @@
 #include "assets.h"
-#include "imgui.h"
+#include <imgui.h>
 #include "shader.h"
+#include "context.h"
 #include "texture.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <tinyfiledialogs/tinyfiledialogs.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#include "render.h"
 
 static std::string Trim(std::string s) {
   auto is_space = [](unsigned char c) { return std::isspace(c); };
@@ -38,33 +42,34 @@ std::map<std::string, std::string> ParseManifest(std::string_view path) {
   return values;
 }
 
-template <> Texture AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
+template <> std::shared_ptr<Texture> AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context& context) {
+  TextureInfo info;
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
-    auto directory =
-        std::filesystem::path(manifest).parent_path().generic_string();
-    auto texture = Texture(directory + manifest_info["path"]);
-    textures.push_back(texture);
-    return texture;
+    auto directory = std::filesystem::path(manifest).parent_path().generic_string();
+    info.data = stbi_load((directory + manifest_info["path"]).data(), &info.width, &info.height, &info.nr_channels, 0);
   } else {
-    auto texture = Texture(manifest_info["path"]);
-    textures.push_back(texture);
-    return texture;
+    info.data = stbi_load(manifest_info["path"].data(), &info.width, &info.height, &info.nr_channels, 0);
   }
+  
+  auto texture = std::make_shared<Texture>();
+  texture->texture = context.render_sys.ConfigureTexture(info);
+  stbi_image_free(info.data);
+  textures.push_back(texture);
+    return texture;
 }
 
-template <> Shader AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
+template <> std::shared_ptr<Shader> AssetSystem::LoadAsset<Shader>(std::string_view manifest, Context& context) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
     auto directory =
         std::filesystem::path(manifest).parent_path().generic_string();
-    auto shader = Shader(directory + manifest_info["vertex_path"],
+    auto shader = std::make_shared<Shader>(directory + manifest_info["vertex_path"],
                          directory + manifest_info["fragment_path"]);
     shaders.push_back(shader);
     return shader;
   } else {
-    auto shader =
-        Shader(manifest_info["vertex_path"], manifest_info["fragment_path"]);
+    auto shader = std::make_shared<Shader>(manifest_info["vertex_path"], manifest_info["fragment_path"]);
     shaders.push_back(shader);
     return shader;
   }
@@ -76,12 +81,12 @@ void AssetSystem::Inspector() {
     auto file_char = tinyfd_openFileDialog("Load Image From Manifest", nullptr,
                                            0, nullptr, nullptr, false);
     if (file_char) {
-      LoadAsset<Texture>(file_char);
+      LoadAsset<Texture>(file_char, Context::Get());
     }
   }
   for (int i = 0; i < textures.size(); i++) {
     ImGui::PushID(i);
-    ImGui::Image(textures[i].texture, ImVec2(100, 100));
+    ImGui::Image(textures[i]->texture, ImVec2(100, 100));
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
       ImGui::SetDragDropPayload("TEXTURE_ASSET", &textures[i], sizeof(Texture));
       ImGui::EndDragDropSource();

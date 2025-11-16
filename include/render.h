@@ -1,6 +1,7 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include "component.h"
+#include "gpu_data.h"
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -25,10 +26,11 @@ struct DataDescriptor {
   std::vector<unsigned int> indices;
 };
 
-struct GPUData {
-  unsigned int vertex_attrib = 0, vertex_buffer = 0;
-  bool element_enabled = false;
-  unsigned int element_buffer = 0;
+struct TextureInfo {
+  unsigned char* data;
+  int width;
+  int height;
+  int nr_channels;
 };
 
 class RenderSystem {
@@ -41,13 +43,15 @@ public:
   glm::vec2 GetWindowSize();
   void SetMode(RenderMode mode);
   
-  GPUData CreateData(DataDescriptor& attribute_data);
-  void DestroyData(GPUData& data);
-  void BindData(GPUData& data);
+  std::shared_ptr<GPUData> CreateData(DataDescriptor& attribute_data);
+  void DestroyData(std::shared_ptr<GPUData> data);
+  void BindData(std::shared_ptr<GPUData> data);
   void UnbindData();
 
+  unsigned int ConfigureTexture(TextureInfo texture_info);
+
   void DrawWorld(World& world, RenderSystem& render_sys);
-  void DestroyShader(Shader &shader);
+  void DestroyShader(std::shared_ptr<Shader> shader);
   void Clear(glm::vec4 color);
   int Render();
   int Quit();

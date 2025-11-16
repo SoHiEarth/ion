@@ -1,15 +1,8 @@
-#include "assets.h"
-#include "component.h"
-#include "physics.h"
+#include "context.h"
 #include "render.h"
-#include "shader.h"
-#include "texture.h"
+#include "physics.h"
+#include "assets.h"
 #include "world.h"
-#include <GLFW/glfw3.h>
-#include <box2d/box2d.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -19,16 +12,12 @@ std::vector<float> vertices = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
                                0.0f, 1.0f,  0.0f, -0.5f, -0.5f, 0.0f, 0.0f,
                                0.0f, -0.5f, 0.5f, 0.0f,  0.0f,  1.0f};
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
-bool render_colliders = false;
 
 int main(int argc, char **argv) {
   World world;
-  RenderSystem render;
-  PhysicsSystem physics;
-  AssetSystem assets;
-
-  render.Init();
-  physics.Init();
+  Context context;
+  context.render_sys.Init();
+  context.physics_sys.Init();
 
   AttributePointer position_pointer;
   position_pointer.size = 3;
@@ -47,35 +36,33 @@ int main(int argc, char **argv) {
   data_desc.element_enabled = true;
   data_desc.vertices = vertices;
   data_desc.indices = indices;
-  auto data = render.CreateData(data_desc);
+  auto data = context.render_sys.CreateData(data_desc);
 
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
 
   auto entity = world.CreateEntity();
-  auto shader = assets.LoadAsset<Shader>("assets/sprite_shader.manifest");
-  auto texture = assets.LoadAsset<Texture>("assets/test_texture.manifest");
+  auto shader = context.asset_sys.LoadAsset<Shader>("assets/sprite_shader.manifest", context);
+  auto texture = context.asset_sys.LoadAsset<Texture>("assets/test_texture.manifest", context);
   world.AddComponent<Transform>(entity, Transform{});
-  world.AddComponent<Renderable>(entity, Renderable{texture, shader});
+  world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
 
-  while (!glfwWindowShouldClose(render.GetWindow())) {
+  while (!glfwWindowShouldClose(context.render_sys.GetWindow())) {
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    physics.Update();
-    assets.Inspector();
+    context.physics_sys.Update();
+    context.asset_sys.Inspector();
     ImGui::Render();
-    render.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    render.BindData(data);
-    render.DrawWorld(world, render);
-    render.UnbindData();
+    context.render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
+    context.render_sys.DrawWorld(world, context.render_sys);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    render.Render();
+    context.render_sys.Render();
   }
-  physics.Quit();
-  render.DestroyData(data);
-  render.DestroyShader(shader);
-  render.Quit();
+  context.physics_sys.Quit();
+  context.render_sys.DestroyData(data);
+  context.render_sys.DestroyShader(shader);
+  context.render_sys.Quit();
   return 0;
 }

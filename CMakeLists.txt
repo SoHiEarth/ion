@@ -12,10 +12,9 @@ add_executable(ion)
 target_compile_features(ion PRIVATE cxx_std_20)
 target_sources(ion PRIVATE
   src/assets.cc
+  src/context.cc
   src/main.cc
   src/shader.cc
-  src/texture.cc
-  src/sprites.cc
   src/render.cc
   src/physics.cc
   src/world.cc

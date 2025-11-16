@@ -1,8 +1,11 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "texture.h"
-#include "shader.h"
-#include "physics.h"
+#include <box2d/box2d.h>
+#include <memory>
+
+struct Texture;
+struct Shader;
+struct GPUData;
 
 enum class ProjectionMode : std::uint8_t { PERSPECTIVE = 0, ORTHOGRAPHIC = 1 };
 
@@ -18,8 +21,9 @@ struct PhysicsBody {
 };
 
 struct Renderable {
-  Texture texture;
-  Shader shader;
+  std::shared_ptr<Texture> texture;
+  std::shared_ptr<Shader> shader;
+  std::shared_ptr<GPUData> data;
 };
 
 struct Camera {
