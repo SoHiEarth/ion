@@ -8,9 +8,11 @@
 #include <imgui_impl_opengl3.h>
 #include <vector>
 
-std::vector<float> vertices = {0.5f, 0.5f,  0.0f, 1.0f,  1.0f,  0.5f, -0.5f,
-                               0.0f, 1.0f,  0.0f, -0.5f, -0.5f, 0.0f, 0.0f,
-                               0.0f, -0.5f, 0.5f, 0.0f,  0.0f,  1.0f};
+std::vector<float> vertices = {  0.5f,  0.5f, 1.0f, 1.0f, 
+                                 0.5f, -0.5f, 1.0f, 0.0f,
+                                -0.5f, -0.5f, 0.0f, 0.0f,
+                                -0.5f,  0.5f, 0.0f, 1.0f
+                              };
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
 
 int main(int argc, char **argv) {
@@ -20,17 +22,17 @@ int main(int argc, char **argv) {
   context.physics_sys.Init();
 
   AttributePointer position_pointer;
-  position_pointer.size = 3;
+  position_pointer.size = 2;
   position_pointer.type = DataType::FLOAT;
   position_pointer.normalized = false;
-  position_pointer.stride = 5 * sizeof(float);
+  position_pointer.stride = 4 * sizeof(float);
   position_pointer.pointer = (void *)0;
   AttributePointer texture_pointer;
   texture_pointer.size = 2;
   texture_pointer.type = DataType::FLOAT;
   texture_pointer.normalized = false;
-  texture_pointer.stride = 5 * sizeof(float);
-  texture_pointer.pointer = (void *)(3 * sizeof(float));
+  texture_pointer.stride = 4 * sizeof(float);
+  texture_pointer.pointer = (void *)(2 * sizeof(float));
   DataDescriptor data_desc;
   data_desc.pointers = {position_pointer, texture_pointer};
   data_desc.element_enabled = true;

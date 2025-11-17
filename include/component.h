@@ -10,7 +10,8 @@ struct GPUData;
 enum class ProjectionMode : std::uint8_t { PERSPECTIVE = 0, ORTHOGRAPHIC = 1 };
 
 struct Transform {
-  glm::vec3 position = glm::vec3(0.0f);
+  glm::vec2 position = glm::vec2(0.0f);
+  int layer = 0;
   glm::vec2 scale = glm::vec2(1.0f);
   float rotation = 0.0f;
 };

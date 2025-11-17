@@ -10,9 +10,8 @@ struct Texture;
 struct Shader;
 struct World;
 enum class DataType { INT, UNSIGNED_INT, FLOAT };
-enum class RenderMode { FILL, LINE };
 struct AttributePointer {
-  int size = 3;
+  int size = 2;
   DataType type = DataType::FLOAT;
   bool normalized = false;
   size_t stride = 0;
@@ -41,8 +40,6 @@ public:
   int Init();
   GLFWwindow *GetWindow();
   glm::vec2 GetWindowSize();
-  void SetMode(RenderMode mode);
-  
   std::shared_ptr<GPUData> CreateData(DataDescriptor& attribute_data);
   void DestroyData(std::shared_ptr<GPUData> data);
   void BindData(std::shared_ptr<GPUData> data);

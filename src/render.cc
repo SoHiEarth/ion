@@ -48,23 +48,12 @@ int RenderSystem::Init() {
     return -1;
   }
   glfwSetFramebufferSizeCallback(window, SizeCallback);
-  glEnable(GL_DEPTH_TEST);
   glViewport(0, 0, window_size.x, window_size.y);
   return 0;
 }
 
 GLFWwindow *RenderSystem::GetWindow() { return window; }
 glm::vec2 RenderSystem::GetWindowSize() { return window_size; }
-void RenderSystem::SetMode(RenderMode mode) {
-  switch (mode) {
-  case RenderMode::FILL:
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    break;
-  case RenderMode::LINE:
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    break;
-  }
-}
 
 GLenum GetTypeEnum(DataType type) {
   switch (type) {
@@ -141,7 +130,7 @@ void RenderSystem::DestroyShader(std::shared_ptr<Shader> shader) {
 
 void RenderSystem::Clear(glm::vec4 color) {
   glClearColor(color.r, color.g, color.b, color.a);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 int RenderSystem::Render() {
@@ -157,7 +146,7 @@ int RenderSystem::Quit() {
 
 glm::mat4 GetModelFromTransform(Transform transform) {
   auto model = glm::mat4(1.0f);
-  model = glm::translate(model, transform.position);
+  model = glm::translate(model, glm::vec3(transform.position, transform.layer * 0.01f));
   model = glm::rotate(model, transform.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
   model = glm::scale(model, glm::vec3(transform.scale, 1));
   return model;
