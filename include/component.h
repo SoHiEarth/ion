@@ -1,6 +1,6 @@
 #pragma once
-#include <glm/glm.hpp>
 #include <box2d/box2d.h>
+#include <glm/glm.hpp>
 #include <memory>
 
 struct Texture;
@@ -28,6 +28,6 @@ struct Renderable {
 };
 
 struct Camera {
-  glm::vec3 position = glm::vec3(0.0f, 0.0f, 3.0f);
+  glm::vec2 position = glm::vec2(0.0f, 0.0f);
   ProjectionMode mode = ProjectionMode::PERSPECTIVE;
 };

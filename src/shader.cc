@@ -13,8 +13,7 @@
 void Shader::Use() { glUseProgram(program); }
 unsigned int Shader::GetProgram() { return program; }
 
-template <>
-int Shader::SetUniform<int>(std::string_view name, int value) {
+template <> int Shader::SetUniform<int>(std::string_view name, int value) {
   auto loc = glGetUniformLocation(program, name.data());
   glUniform1i(loc, value);
   return 0;

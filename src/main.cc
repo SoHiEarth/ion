@@ -1,18 +1,17 @@
-#include "context.h"
-#include "render.h"
-#include "physics.h"
 #include "assets.h"
+#include "context.h"
+#include "physics.h"
+#include "render.h"
 #include "world.h"
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <vector>
 
-std::vector<float> vertices = {  0.5f,  0.5f, 1.0f, 1.0f, 
-                                 0.5f, -0.5f, 1.0f, 0.0f,
-                                -0.5f, -0.5f, 0.0f, 0.0f,
-                                -0.5f,  0.5f, 0.0f, 1.0f
-                              };
+std::vector<float> vertices = {0.5f,  0.5f, 1.0f,  0.0f,  0.5f, -0.5f,
+                               1.0f,  1.0f, -0.5f, -0.5f, 0.0f, 1.0f,
+                               -0.5f, 0.5f, 0.0f,  0.0f};
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
 
 int main(int argc, char **argv) {
@@ -39,15 +38,17 @@ int main(int argc, char **argv) {
   data_desc.vertices = vertices;
   data_desc.indices = indices;
   auto data = context.render_sys.CreateData(data_desc);
-
+  printf("Count: %zu", world.GetComponentSet<Transform>().size());
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
-
   auto entity = world.CreateEntity();
-  auto shader = context.asset_sys.LoadAsset<Shader>("assets/sprite_shader.manifest", context);
-  auto texture = context.asset_sys.LoadAsset<Texture>("assets/test_texture.manifest", context);
+  auto shader = context.asset_sys.LoadAsset<Shader>(
+      "assets/sprite_shader.manifest", context);
+  auto texture = context.asset_sys.LoadAsset<Texture>(
+      "assets/test_texture.manifest", context);
   world.AddComponent<Transform>(entity, Transform{});
   world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
+  printf("Count: %zu", world.GetComponentSet<Transform>().size());
 
   while (!glfwWindowShouldClose(context.render_sys.GetWindow())) {
     glfwPollEvents();
@@ -56,9 +57,25 @@ int main(int argc, char **argv) {
     ImGui::NewFrame();
     context.physics_sys.Update();
     context.asset_sys.Inspector();
+
+    // World Inspector - Due to be moved to a function soon
+    {
+      ImGui::Begin("World");
+      for (auto &[id, transform] : world.GetComponentSet<Transform>()) {
+        ImGui::PushID(id);
+        ImGui::SeparatorText("Object");
+        ImGui::DragFloat2("Position", glm::value_ptr(transform.position), 0.1f);
+        ImGui::DragInt("Layer", &transform.layer);
+        ImGui::DragFloat2("Scale", glm::value_ptr(transform.scale), 0.1f);
+        ImGui::DragFloat("Rotation", &transform.rotation, 0.1f);
+        ImGui::PopID();
+      }
+      ImGui::End();
+    }
+
     ImGui::Render();
     context.render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    context.render_sys.DrawWorld(world, context.render_sys);
+    context.render_sys.DrawWorld(world);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     context.render_sys.Render();
   }

@@ -72,7 +72,7 @@ GLenum GetTypeEnum(DataType type) {
   }
 }
 
-std::shared_ptr<GPUData> RenderSystem::CreateData(DataDescriptor& data_desc) {
+std::shared_ptr<GPUData> RenderSystem::CreateData(DataDescriptor &data_desc) {
   auto data = std::make_shared<GPUData>();
   data->element_enabled = data_desc.element_enabled;
   glGenVertexArrays(1, &data->vertex_attrib);
@@ -91,7 +91,7 @@ std::shared_ptr<GPUData> RenderSystem::CreateData(DataDescriptor& data_desc) {
                  data_desc.indices.data(), GL_STATIC_DRAW);
   }
   for (int i = 0; i < data_desc.pointers.size(); i++) {
-    auto& pointer_data = data_desc.pointers[i];
+    auto &pointer_data = data_desc.pointers[i];
     glVertexAttribPointer(i, pointer_data.size, GetTypeEnum(pointer_data.type),
                           pointer_data.normalized, pointer_data.stride,
                           pointer_data.pointer);
@@ -146,32 +146,35 @@ int RenderSystem::Quit() {
 
 glm::mat4 GetModelFromTransform(Transform transform) {
   auto model = glm::mat4(1.0f);
-  model = glm::translate(model, glm::vec3(transform.position, transform.layer * 0.01f));
-  model = glm::rotate(model, transform.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::translate(
+      model, glm::vec3(transform.position, transform.layer * 0.01f));
+  model = glm::rotate(model, glm::radians(transform.rotation),
+                      glm::vec3(0.0f, 0.0f, 1.0f));
   model = glm::scale(model, glm::vec3(transform.scale, 1));
   return model;
 }
 
-void RenderSystem::DrawWorld(World& world, RenderSystem& render_sys) {
-  auto& all_cameras = world.GetComponentSet<Camera>();
-  auto& all_transforms = world.GetComponentSet<Transform>();
-  for (auto& [entity_id, camera] : all_cameras) {
+void RenderSystem::DrawWorld(World &world) {
+  auto &all_cameras = world.GetComponentSet<Camera>();
+  auto &all_transforms = world.GetComponentSet<Transform>();
+  for (auto &[entity_id, camera] : all_cameras) {
     glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, -camera.position);
+    view = glm::translate(view, -glm::vec3{camera.position, 3.0});
     glm::mat4 projection;
-    if (camera.mode == ProjectionMode::PERSPECTIVE) {
-      projection = glm::perspective(
-          glm::radians(45.0f),
-          render_sys.GetWindowSize().x / render_sys.GetWindowSize().y, 0.1f,
-          100.0f);
+    // if (camera.mode == ProjectionMode::PERSPECTIVE) {
+    projection =
+        glm::perspective(glm::radians(45.0f),
+                         GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
+    /*
     } else {
-      float ortho_scale = 10.0f;
-      projection = glm::ortho(
-          -ortho_scale * (render_sys.GetWindowSize().x / render_sys.GetWindowSize().y),
-          ortho_scale * (render_sys.GetWindowSize().x / render_sys.GetWindowSize().y),
-          -ortho_scale, ortho_scale, 0.1f, 100.0f);
-    }
-    for (auto& [entity_id, transform] : all_transforms) {
+    float ortho_scale = 10.0f;
+    projection = glm::ortho(-ortho_scale * (render_sys.GetWindowSize().x /
+                                            render_sys.GetWindowSize().y),
+                            ortho_scale * (render_sys.GetWindowSize().x /
+                                           render_sys.GetWindowSize().y),
+                            -ortho_scale, ortho_scale, 0.1f, 100.0f);
+    } */
+    for (auto &[entity_id, transform] : all_transforms) {
       auto renderable = world.GetComponent<Renderable>(entity_id);
       if (renderable) {
         BindData(renderable->data);
@@ -193,8 +196,9 @@ unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
   if (texture_info.data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_info.width, texture_info.height, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, texture_info.data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_info.width,
+                 texture_info.height, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 texture_info.data);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
     std::cerr << TEXTURE_LOAD_FAIL << std::endl;

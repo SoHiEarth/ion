@@ -1,10 +1,11 @@
 #pragma once
 
 #include "component.h"
-#include "texture.h"
-#include "ecs.h"
 #include "render.h"
 #include <map>
+
+using EntityID = std::uint32_t;
+const EntityID NULL_ENTITY = std::numeric_limits<EntityID>::max();
 
 struct World {
 private:
@@ -13,20 +14,21 @@ private:
   std::map<EntityID, Renderable> renderables;
   std::map<EntityID, PhysicsBody> physics_bodies;
   std::map<EntityID, Camera> cameras;
-  
+
 public:
   EntityID CreateEntity();
   void DestroyEntity(EntityID entity);
-  EntityID GetNextEntityID() const { return next_id;}
+  EntityID GetNextEntityID() const { return next_id; }
 
-  template <typename T> std::map<EntityID, T>& GetComponentSet();
-  
-  template <typename T> T* AddComponent(EntityID entity, const T& component) {
+  template <typename T> std::map<EntityID, T> &GetComponentSet();
+
+  template <typename T> T *AddComponent(EntityID entity, const T &component) {
+    printf("New Component: %s\n", typeid(component).name());
     GetComponentSet<T>().insert({entity, component});
     return &GetComponentSet<T>().at(entity);
   }
 
-  template <typename T> T* GetComponent(EntityID entity) {
+  template <typename T> T *GetComponent(EntityID entity) {
     auto it = GetComponentSet<T>().find(entity);
     if (it != GetComponentSet<T>().end()) {
       return &it->second;
@@ -37,7 +39,7 @@ public:
   template <typename T> bool ContainsComponent(EntityID entity) {
     return GetComponentSet<T>().Contains(entity);
   }
-  
+
   template <typename T> void RemoveComponent(EntityID entity) {
     GetComponentSet<T>().Remove(entity);
   }
