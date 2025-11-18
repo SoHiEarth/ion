@@ -15,6 +15,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <stb_image.h>
+#include <string>
 
 glm::vec2 window_size = glm::vec2(800, 600);
 
@@ -196,6 +197,15 @@ void RenderSystem::DrawWorld(World &world) {
         renderable->shader->SetUniform("projection", projection);
         auto model = GetModelFromTransform(transform);
         renderable->shader->SetUniform("model", model);
+        renderable->shader->SetUniform("light_count", static_cast<int>(world.GetComponentSet<Light>().size()));
+        for (int i = 0; i < world.GetComponentSet<Light>().size(); i++) {
+          auto &[light_entity, light] = *std::next(world.GetComponentSet<Light>().begin(), i);
+          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].position", world.GetComponent<Transform>(light_entity)->position);
+          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light.intensity);
+          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light.radial_falloff);
+          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].angular_falloff", light.angular_falloff);
+          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].color", light.color);
+        }
         glBindTexture(GL_TEXTURE_2D, renderable->texture->texture);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         UnbindData();

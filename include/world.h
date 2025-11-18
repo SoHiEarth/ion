@@ -14,6 +14,7 @@ private:
   std::map<EntityID, Renderable> renderables;
   std::map<EntityID, PhysicsBody> physics_bodies;
   std::map<EntityID, Camera> cameras;
+  std::map<EntityID, Light> lights;
 
 public:
   EntityID CreateEntity();
@@ -36,10 +37,10 @@ public:
   }
 
   template <typename T> bool ContainsComponent(EntityID entity) {
-    return GetComponentSet<T>().Contains(entity);
+    return GetComponentSet<T>().contains(entity);
   }
 
   template <typename T> void RemoveComponent(EntityID entity) {
-    GetComponentSet<T>().Remove(entity);
+    GetComponentSet<T>().erase(entity);
   }
 };

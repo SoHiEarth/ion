@@ -20,9 +20,23 @@ template <> int Shader::SetUniform<int>(std::string_view name, int value) {
 }
 
 template <>
+int Shader::SetUniform<float>(std::string_view name, float value) {
+  auto loc = glGetUniformLocation(program, name.data());
+  glUniform1f(loc, value);
+  return 0;
+}
+
+template <>
 int Shader::SetUniform<glm::vec2>(std::string_view name, glm::vec2 value) {
   auto loc = glGetUniformLocation(program, name.data());
   glUniform2fv(loc, 1, glm::value_ptr(value));
+  return 0;
+}
+
+template <>
+int Shader::SetUniform<glm::vec3>(std::string_view name, glm::vec3 value) {
+  auto loc = glGetUniformLocation(program, name.data());
+  glUniform3fv(loc, 1, glm::value_ptr(value));
   return 0;
 }
 

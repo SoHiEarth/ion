@@ -1,6 +1,7 @@
 #include "assets.h"
 #include "context.h"
 #include "physics.h"
+#include "texture.h"
 #include "render.h"
 #include "world.h"
 #include <glm/gtc/type_ptr.hpp>
@@ -75,6 +76,9 @@ int main(int argc, char **argv) {
       "assets/test_texture.manifest", Context::Get());
   world.AddComponent<Transform>(entity, Transform{});
   world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
+  auto light_entity = world.CreateEntity();
+  world.AddComponent<Transform>(light_entity, Transform{glm::vec2(2.0f, 2.0f), 0, glm::vec2(1.0f), 0.0f});
+  world.AddComponent<Light>(light_entity, Light{1.0f, 0.1f, 0.1f});
 
   while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
     glfwPollEvents();
@@ -87,14 +91,44 @@ int main(int argc, char **argv) {
     // World Inspector - Due to be moved to a function soon
     {
       ImGui::Begin("World");
-      for (auto &[id, transform] : world.GetComponentSet<Transform>()) {
+      auto& transforms = world.GetComponentSet<Transform>();
+      for (auto &[id, transform] : transforms) {
         ImGui::PushID(id);
-        ImGui::SeparatorText("Object");
-        ImGui::DragFloat2("Position", glm::value_ptr(transform.position), 0.1f);
-        ImGui::DragInt("Layer", &transform.layer);
-        ImGui::DragFloat2("Scale", glm::value_ptr(transform.scale), 0.1f);
-        ImGui::DragFloat("Rotation", &transform.rotation, 0.1f);
+        if (ImGui::CollapsingHeader("Object", ImGuiTreeNodeFlags_DefaultOpen)) {
+          if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::DragFloat2("Position", glm::value_ptr(transform.position), 0.1f);
+            ImGui::DragInt("Layer", &transform.layer);
+            ImGui::DragFloat2("Scale", glm::value_ptr(transform.scale), 0.1f);
+            ImGui::DragFloat("Rotation", &transform.rotation, 0.1f);
+            ImGui::TreePop();
+          }
+          if (world.ContainsComponent<Renderable>(id)) {
+            if (ImGui::TreeNode("Renderable")) {
+              auto renderable = world.GetComponent<Renderable>(id);
+              ImGui::Image(renderable->texture->texture, ImVec2(100, 100));
+              ImGui::TreePop();
+            }
+          }
+          if (world.ContainsComponent<Camera>(id)) {
+            if (ImGui::TreeNode("Camera")) {
+              auto camera = world.GetComponent<Camera>(id);
+              ImGui::Text("Camera Component");
+              ImGui::TreePop();
+            }
+          }
+          if (world.ContainsComponent<Light>(id)) {
+            if (ImGui::TreeNode("Light")) {
+              auto light = world.GetComponent<Light>(id);
+              ImGui::ColorEdit3("Color", glm::value_ptr(light->color), 0.01f);
+              ImGui::DragFloat("Intensity", &light->intensity, 0.01f);
+              ImGui::DragFloat("Radial Falloff", &light->radial_falloff, 0.01f);
+              // ImGui::DragFloat("Angular Falloff", &light->angular_falloff, 0.01f);
+              ImGui::TreePop();
+            }
+          }
+        }
         ImGui::PopID();
+        ImGui::Separator();
       }
       ImGui::End();
     }

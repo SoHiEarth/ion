@@ -27,6 +27,13 @@ struct Renderable {
   std::shared_ptr<GPUData> data;
 };
 
+struct Light {
+  float intensity = 1.0f;
+  float radial_falloff = 1.0f;
+  float angular_falloff = 1.0f;
+  glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
+};
+
 struct Camera {
   glm::vec2 position = glm::vec2(0.0f, 0.0f);
   ProjectionMode mode = ProjectionMode::PERSPECTIVE;

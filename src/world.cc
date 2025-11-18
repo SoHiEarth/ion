@@ -18,6 +18,10 @@ template <> std::map<EntityID, Camera> &World::GetComponentSet<Camera>() {
   return cameras;
 }
 
+template <> std::map<EntityID, Light> &World::GetComponentSet<Light>() {
+  return lights;
+}
+
 EntityID World::CreateEntity() { return next_id++; }
 
 void World::DestroyEntity(EntityID entity) {
@@ -25,4 +29,5 @@ void World::DestroyEntity(EntityID entity) {
   renderables.erase(entity);
   physics_bodies.erase(entity);
   cameras.erase(entity);
+  lights.erase(entity);
 }
