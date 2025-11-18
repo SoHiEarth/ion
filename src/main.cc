@@ -20,24 +20,28 @@ int main(int argc, char **argv) {
   context.render_sys.Init();
   context.physics_sys.Init();
 
-  AttributePointer position_pointer;
-  position_pointer.size = 2;
-  position_pointer.type = DataType::FLOAT;
-  position_pointer.normalized = false;
-  position_pointer.stride = 4 * sizeof(float);
-  position_pointer.pointer = (void *)0;
-  AttributePointer texture_pointer;
-  texture_pointer.size = 2;
-  texture_pointer.type = DataType::FLOAT;
-  texture_pointer.normalized = false;
-  texture_pointer.stride = 4 * sizeof(float);
-  texture_pointer.pointer = (void *)(2 * sizeof(float));
-  DataDescriptor data_desc;
-  data_desc.pointers = {position_pointer, texture_pointer};
-  data_desc.element_enabled = true;
-  data_desc.vertices = vertices;
-  data_desc.indices = indices;
+  AttributePointer position_pointer {
+    .size = 2,
+    .type = DataType::FLOAT,
+    .normalized = false,
+    .stride = 4 * sizeof(float),
+    .pointer = (void *)0
+  };
+  AttributePointer texture_pointer {
+    .size = 2,
+    .type = DataType::FLOAT,
+    .normalized = false,
+    .stride = 4 * sizeof(float),
+    .pointer = (void *)(2 * sizeof(float))
+  };
+  DataDescriptor data_desc {
+    .pointers = {position_pointer, texture_pointer},
+    .element_enabled = true,
+    .vertices = vertices,
+    .indices = indices
+  };
   auto data = context.render_sys.CreateData(data_desc);
+
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
   auto entity = world.CreateEntity();

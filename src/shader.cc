@@ -34,8 +34,8 @@ int Shader::SetUniform<glm::mat4>(std::string_view name, glm::mat4 value) {
 }
 
 std::string _ShaderInternalReadFile(std::string_view path) {
-  std::string data;
-  std::ifstream file;
+  std::string data{};
+  std::ifstream file{};
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
     file.open(path.data());
@@ -44,7 +44,7 @@ std::string _ShaderInternalReadFile(std::string_view path) {
     file.close();
     data = stream.str();
   } catch (std::ifstream::failure e) {
-    std::cerr << FILE_READ_FAIL << std::endl;
+    printf("%d\n", FILE_READ_FAIL);
   }
   return data;
 }
@@ -64,14 +64,16 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertex, info_log.size(), nullptr, info_log.data());
-    std::cerr << VERTEX_COMPILATION_FAIL << std::endl;
+    printf("%s\n", info_log.data());
+    printf("%d\n", VERTEX_COMPILATION_FAIL);
   }
   glShaderSource(fragment, 1, &fragment_code_char, nullptr);
   glCompileShader(fragment);
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragment, 512, nullptr, info_log.data());
-    std::cerr << FRAGMENT_COMPILATION_FAIL << std::endl;
+    printf("%s\n", info_log.data());
+    printf("%d\n", FRAGMENT_COMPILATION_FAIL);
   }
   program = glCreateProgram();
   glAttachShader(program, vertex);
@@ -80,7 +82,8 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetProgramiv(program, GL_LINK_STATUS, &success);
   if (!success) {
     glGetProgramInfoLog(program, 512, nullptr, info_log.data());
-    std::cerr << SHADER_PROGRAM_LINK_FAIL << std::endl;
+    printf("%s\n", info_log.data());
+    printf("%d\n", SHADER_PROGRAM_LINK_FAIL);
   }
   glDeleteShader(vertex);
   glDeleteShader(fragment);

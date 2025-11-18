@@ -14,7 +14,6 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include <iostream>
 #include <stb_image.h>
 
 glm::vec2 window_size = glm::vec2(800, 600);
@@ -36,7 +35,7 @@ int RenderSystem::Init() {
 #endif
   window = glfwCreateWindow(window_size.x, window_size.y, "ion", NULL, NULL);
   if (window == nullptr) {
-    std::cerr << WINDOW_CREATE_FAIL << std::endl;
+    printf("%d\n", WINDOW_CREATE_FAIL);
     glfwTerminate();
     return -1;
   }
@@ -46,7 +45,7 @@ int RenderSystem::Init() {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init("#version 150");
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-    std::cerr << OPENGL_LOADER_FAIL << std::endl;
+    printf("%d\n", OPENGL_LOADER_FAIL);
     return -1;
   }
   glfwSetFramebufferSizeCallback(window, SizeCallback);
@@ -203,14 +202,15 @@ unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
                  texture_info.data);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    std::cerr << TEXTURE_LOAD_FAIL << std::endl;
+    printf("%d\n", TEXTURE_LOAD_FAIL);
   }
   return texture;
 }
 
 Framebuffer RenderSystem::CreateFramebuffer(FramebufferInfo& info) {
-  Framebuffer framebuffer;
-  framebuffer.recreate_on_resize = info.recreate_on_resize;
+  Framebuffer framebuffer {
+    .recreate_on_resize = false,
+  };
   glGenFramebuffers(1, &framebuffer.framebuffer);
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer);
   glGenTextures(1, &framebuffer.colorbuffer);
