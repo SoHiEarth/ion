@@ -1,0 +1,3 @@
+relative:true
+vertex_path:/screen.vert
+fragment_path:/screen.frag

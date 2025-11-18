@@ -9,16 +9,25 @@
 #include <imgui_impl_opengl3.h>
 #include <vector>
 
-std::vector<float> vertices = {0.5f,  0.5f, 1.0f,  0.0f,  0.5f, -0.5f,
-                               1.0f,  1.0f, -0.5f, -0.5f, 0.0f, 1.0f,
-                               -0.5f, 0.5f, 0.0f,  0.0f};
+std::vector<float> vertices = {
+   0.5f,  0.5f, 1.0f, 0.0f,
+   0.5f, -0.5f, 1.0f, 1.0f,
+  -0.5f, -0.5f, 0.0f, 1.0f,
+  -0.5f,  0.5f, 0.0f, 0.0f
+},
+screen_vertices = {
+    1.0f,  1.0f,  1.0f, 1.0f,
+    1.0f, -1.0f,  1.0f, 0.0f,
+   -1.0f, -1.0f,  0.0f, 0.0f,
+   -1.0f,  1.0f,  0.0f, 1.0f
+};
+;
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
 
 int main(int argc, char **argv) {
   World world;
-  Context context;
-  context.render_sys.Init();
-  context.physics_sys.Init();
+  Context::Get().render_sys.Init();
+  Context::Get().physics_sys.Init();
 
   AttributePointer position_pointer {
     .size = 2,
@@ -40,25 +49,40 @@ int main(int argc, char **argv) {
     .vertices = vertices,
     .indices = indices
   };
-  auto data = context.render_sys.CreateData(data_desc);
+  auto data = Context::Get().render_sys.CreateData(data_desc);
+
+  DataDescriptor screen_data_desc {
+    .pointers = {position_pointer, texture_pointer},
+    .element_enabled = true,
+    .vertices = screen_vertices,
+    .indices = indices
+  };
+  auto screen_data = Context::Get().render_sys.CreateData(screen_data_desc);
+
+  auto framebuffer_info = FramebufferInfo{
+      .recreate_on_resize = true
+  };
+  auto framebuffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
 
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
   auto entity = world.CreateEntity();
-  auto shader = context.asset_sys.LoadAsset<Shader>(
-      "assets/sprite_shader.manifest", context);
-  auto texture = context.asset_sys.LoadAsset<Texture>(
-      "assets/test_texture.manifest", context);
+  auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
+      "assets/sprite_shader.manifest", Context::Get());
+  auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+      "assets/screen_shader.manifest", Context::Get());
+  auto texture = Context::Get().asset_sys.LoadAsset<Texture>(
+      "assets/test_texture.manifest", Context::Get());
   world.AddComponent<Transform>(entity, Transform{});
   world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
 
-  while (!glfwWindowShouldClose(context.render_sys.GetWindow())) {
+  while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    context.physics_sys.Update();
-    context.asset_sys.Inspector();
+    Context::Get().physics_sys.Update();
+    Context::Get().asset_sys.Inspector();
 
     // World Inspector - Due to be moved to a function soon
     {
@@ -76,14 +100,15 @@ int main(int argc, char **argv) {
     }
 
     ImGui::Render();
-    context.render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    context.render_sys.DrawWorld(world);
+    Context::Get().render_sys.BindFramebuffer(framebuffer);
+    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
+    Context::Get().render_sys.DrawWorld(world);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    context.render_sys.Render();
+    Context::Get().render_sys.Render(framebuffer, screen_data, screen_shader);
   }
-  context.physics_sys.Quit();
-  context.render_sys.DestroyData(data);
-  context.render_sys.DestroyShader(shader);
-  context.render_sys.Quit();
+  Context::Get().physics_sys.Quit();
+  Context::Get().render_sys.DestroyData(data);
+  Context::Get().render_sys.DestroyShader(shader);
+  Context::Get().render_sys.Quit();
   return 0;
 }

@@ -22,7 +22,7 @@ void SizeCallback(GLFWwindow *window, int w, int h) {
   glViewport(0, 0, w, h);
   window_size.x = w;
   window_size.y = h;
-  Context::Get().render_sys;
+  Context::Get().render_sys.UpdateFramebuffers();
 }
 
 int RenderSystem::Init() {
@@ -139,6 +139,18 @@ int RenderSystem::Render() {
   return 0;
 }
 
+int RenderSystem::Render(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader) {
+  shader->Use();
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+  BindData(data);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  UnbindData();
+  glfwSwapBuffers(window);
+  return 0;
+}
+
 int RenderSystem::Quit() {
   glfwDestroyWindow(window);
   glfwTerminate();
@@ -201,25 +213,30 @@ unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
                  texture_info.height, 0, GL_RGB, GL_UNSIGNED_BYTE,
                  texture_info.data);
     glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   } else {
     printf("%d\n", TEXTURE_LOAD_FAIL);
   }
   return texture;
 }
 
-Framebuffer RenderSystem::CreateFramebuffer(FramebufferInfo& info) {
-  Framebuffer framebuffer {
-    .recreate_on_resize = false,
-  };
-  glGenFramebuffers(1, &framebuffer.framebuffer);
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer);
-  glGenTextures(1, &framebuffer.colorbuffer);
-  glBindTexture(GL_TEXTURE_2D, framebuffer.colorbuffer);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_size.x, window_size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+std::shared_ptr<Framebuffer> RenderSystem::CreateFramebuffer(FramebufferInfo& info) {
+  auto framebuffer = std::make_shared<Framebuffer>();
+  framebuffer->recreate_on_resize = info.recreate_on_resize;
+  glGenFramebuffers(1, &framebuffer->framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
+  glGenTextures(1, &framebuffer->colorbuffer);
+  glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x), static_cast<int>(window_size.y), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindTexture(GL_TEXTURE_2D, 0);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.colorbuffer, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer->colorbuffer, 0);
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     printf("Failed to create framebuffer\n");
   }
@@ -228,8 +245,20 @@ Framebuffer RenderSystem::CreateFramebuffer(FramebufferInfo& info) {
   return framebuffer;
 }
 
-void RenderSystem::BindFramebuffer(Framebuffer framebuffer) {
-  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer);
+void RenderSystem::UpdateFramebuffers() {
+  for (auto& framebuffer : framebuffers) {
+    if (framebuffer->recreate_on_resize) {
+      glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x), static_cast<int>(window_size.y), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
+  }
+}
+
+void RenderSystem::BindFramebuffer(std::shared_ptr<Framebuffer> framebuffer) {
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
 }
 
 void RenderSystem::UnbindFramebuffer() {
