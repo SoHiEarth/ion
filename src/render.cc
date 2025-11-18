@@ -9,6 +9,7 @@
 #include "world.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include "context.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -22,6 +23,7 @@ void SizeCallback(GLFWwindow *window, int w, int h) {
   glViewport(0, 0, w, h);
   window_size.x = w;
   window_size.y = h;
+  Context::Get().render_sys;
 }
 
 int RenderSystem::Init() {
@@ -204,4 +206,32 @@ unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
     std::cerr << TEXTURE_LOAD_FAIL << std::endl;
   }
   return texture;
+}
+
+Framebuffer RenderSystem::CreateFramebuffer(FramebufferInfo& info) {
+  Framebuffer framebuffer;
+  framebuffer.recreate_on_resize = info.recreate_on_resize;
+  glGenFramebuffers(1, &framebuffer.framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer);
+  glGenTextures(1, &framebuffer.colorbuffer);
+  glBindTexture(GL_TEXTURE_2D, framebuffer.colorbuffer);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_size.x, window_size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.colorbuffer, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    printf("Failed to create framebuffer\n");
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  framebuffers.push_back(framebuffer);
+  return framebuffer;
+}
+
+void RenderSystem::BindFramebuffer(Framebuffer framebuffer) {
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.framebuffer);
+}
+
+void RenderSystem::UnbindFramebuffer() {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

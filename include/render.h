@@ -32,24 +32,40 @@ struct TextureInfo {
   int nr_channels;
 };
 
+struct FramebufferInfo {
+  bool enable_colorbuffer = true;
+  bool recreate_on_resize = false;
+};
+
+struct Framebuffer {
+  bool recreate_on_resize = false;
+  unsigned int framebuffer = 0;
+  unsigned int colorbuffer = 0;
+};
+
 class RenderSystem {
 private:
   GLFWwindow *window;
+  std::vector<Framebuffer> framebuffers;
 
 public:
   int Init();
   GLFWwindow *GetWindow();
   glm::vec2 GetWindowSize();
-  std::shared_ptr<GPUData> CreateData(DataDescriptor &attribute_data);
-  void DestroyData(std::shared_ptr<GPUData> data);
-  void BindData(std::shared_ptr<GPUData> data);
+  std::shared_ptr<GPUData> CreateData(DataDescriptor&);
+  void DestroyData(std::shared_ptr<GPUData>);
+  void BindData(std::shared_ptr<GPUData>);
   void UnbindData();
 
-  unsigned int ConfigureTexture(TextureInfo texture_info);
+  unsigned int ConfigureTexture(TextureInfo);
+  
+  Framebuffer CreateFramebuffer(FramebufferInfo&);
+  void BindFramebuffer(Framebuffer);
+  void UnbindFramebuffer();
 
-  void DrawWorld(World &world);
-  void DestroyShader(std::shared_ptr<Shader> shader);
-  void Clear(glm::vec4 color);
+  void DrawWorld(World&);
+  void DestroyShader(std::shared_ptr<Shader>);
+  void Clear(glm::vec4);
   int Render();
   int Quit();
 };

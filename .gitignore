@@ -6,3 +6,4 @@ imgui.ini
 /.vs
 /.vscode
 /out
+compile_commands.json

@@ -38,7 +38,6 @@ int main(int argc, char **argv) {
   data_desc.vertices = vertices;
   data_desc.indices = indices;
   auto data = context.render_sys.CreateData(data_desc);
-  printf("Count: %zu", world.GetComponentSet<Transform>().size());
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
   auto entity = world.CreateEntity();
@@ -48,7 +47,6 @@ int main(int argc, char **argv) {
       "assets/test_texture.manifest", context);
   world.AddComponent<Transform>(entity, Transform{});
   world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
-  printf("Count: %zu", world.GetComponentSet<Transform>().size());
 
   while (!glfwWindowShouldClose(context.render_sys.GetWindow())) {
     glfwPollEvents();

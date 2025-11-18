@@ -23,7 +23,6 @@ public:
   template <typename T> std::map<EntityID, T> &GetComponentSet();
 
   template <typename T> T *AddComponent(EntityID entity, const T &component) {
-    printf("New Component: %s\n", typeid(component).name());
     GetComponentSet<T>().insert({entity, component});
     return &GetComponentSet<T>().at(entity);
   }
