@@ -43,6 +43,11 @@ struct Framebuffer {
   unsigned int colorbuffer = 0;
 };
 
+enum RenderPass {
+  RENDER_PASS_COLOR,
+  RENDER_PASS_NORMAL
+};
+
 class RenderSystem {
 private:
   GLFWwindow *window;
@@ -57,17 +62,18 @@ public:
   void BindData(std::shared_ptr<GPUData>);
   void UnbindData();
 
-  unsigned int ConfigureTexture(TextureInfo);
+  unsigned int ConfigureTexture(const TextureInfo& texture_info);
   
   std::shared_ptr<Framebuffer> CreateFramebuffer(FramebufferInfo&);
   void UpdateFramebuffers();
   void BindFramebuffer(std::shared_ptr<Framebuffer>);
   void UnbindFramebuffer();
+  void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>, std::shared_ptr<GPUData> quad);
 
-  void DrawWorld(World&);
+  void DrawWorld(World&, RenderPass);
   void DestroyShader(std::shared_ptr<Shader>);
   void Clear(glm::vec4);
-  int Render(std::shared_ptr<Framebuffer>, std::shared_ptr<GPUData>, std::shared_ptr<Shader>);
+  int Render(std::shared_ptr<Framebuffer> color_framebuffer, std::shared_ptr<Framebuffer> normal_framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, World& world);
   void Present();
   int Quit();
 };

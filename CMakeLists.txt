@@ -16,6 +16,7 @@ target_sources(ion PRIVATE
   src/main.cc
   src/shader.cc
   src/render.cc
+  src/texture.cc
   src/physics.cc
   src/world.cc
 )

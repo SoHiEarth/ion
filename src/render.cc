@@ -134,16 +134,58 @@ void RenderSystem::Clear(glm::vec4 color) {
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int RenderSystem::Render(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader) {
+int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<Framebuffer> normal_fb, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, World& world) {
   shader->Use();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, static_cast<int>(window_size.x), static_cast<int>(window_size.y));
   glClear(GL_COLOR_BUFFER_BIT);
-  glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, color_fb->colorbuffer);
+  shader->SetUniform("color_texture", 0);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, normal_fb->colorbuffer);
+  shader->SetUniform("normal_texture", 1);
+  shader->SetUniform("light_count", static_cast<int>(world.GetComponentSet<Light>().size()));
+  
+  auto &all_cameras = world.GetComponentSet<Camera>();
+  glm::mat4 view = glm::mat4(1.0f);
+  glm::mat4 projection = glm::mat4(1.0f);
+  if (!all_cameras.empty()) {
+    auto& camera = all_cameras.begin()->second;
+    view = glm::translate(view, -glm::vec3{camera.position, 3.0});
+    projection = glm::perspective(glm::radians(45.0f), GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
+  }
+  
+  for (int i = 0; i < world.GetComponentSet<Light>().size(); i++) {
+    auto& [entity_id, light] = *std::next(world.GetComponentSet<Light>().begin(), i);
+    auto light_world_pos = glm::vec4(world.GetComponent<Transform>(entity_id)->position, 0.0f, 1.0f);
+    auto light_clip_pos = projection * view * light_world_pos;
+    auto light_ndc_pos = glm::vec2(light_clip_pos) / light_clip_pos.w;
+    
+    shader->SetUniform("lights[" + std::to_string(i) + "].position", light_ndc_pos);
+    shader->SetUniform("lights[" + std::to_string(i) + "].color", light.color);
+    shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light.intensity);
+    shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light.radial_falloff);
+  }  
   BindData(data);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   UnbindData();
   return 0;
+}
+
+void RenderSystem::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> data) {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, static_cast<int>(window_size.x), static_cast<int>(window_size.y));
+  glClear(GL_COLOR_BUFFER_BIT);
+  shader->Use();
+  BindData(data);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+  shader->SetUniform("screen_texture", 0);
+  if (data->element_enabled) {
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  } else {
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+  }
+  UnbindData();
 }
 
 int RenderSystem::Quit() {
@@ -162,7 +204,7 @@ glm::mat4 GetModelFromTransform(Transform transform) {
   return model;
 }
 
-void RenderSystem::DrawWorld(World &world) {
+void RenderSystem::DrawWorld(World &world, RenderPass pass) {
   auto &all_cameras = world.GetComponentSet<Camera>();
   auto &all_transforms = world.GetComponentSet<Transform>();
   for (auto &[entity_id, camera] : all_cameras) {
@@ -191,15 +233,12 @@ void RenderSystem::DrawWorld(World &world) {
         renderable->shader->SetUniform("projection", projection);
         auto model = GetModelFromTransform(transform);
         renderable->shader->SetUniform("model", model);
-        renderable->shader->SetUniform("light_count", static_cast<int>(world.GetComponentSet<Light>().size()));
-        for (int i = 0; i < world.GetComponentSet<Light>().size(); i++) {
-          auto &[light_entity, light] = *std::next(world.GetComponentSet<Light>().begin(), i);
-          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].position", world.GetComponent<Transform>(light_entity)->position);
-          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light.intensity);
-          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light.radial_falloff);
-          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].color", light.color);
+        glActiveTexture(GL_TEXTURE0);
+        if (pass == RENDER_PASS_COLOR) {
+          glBindTexture(GL_TEXTURE_2D, renderable->color->texture);
+        } else if (pass == RENDER_PASS_NORMAL) {
+          glBindTexture(GL_TEXTURE_2D, renderable->normal->texture);
         }
-        glBindTexture(GL_TEXTURE_2D, renderable->texture->texture);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         UnbindData();
       }
@@ -207,13 +246,31 @@ void RenderSystem::DrawWorld(World &world) {
   }
 }
 
-unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
+unsigned int RenderSystem::ConfigureTexture(const TextureInfo& texture_info) {
   unsigned int texture;
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
   if (texture_info.data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture_info.width,
-                 texture_info.height, 0, GL_RGB, GL_UNSIGNED_BYTE,
+    GLenum format;
+    switch (texture_info.nr_channels) {
+    case 1:
+      format = GL_RED;
+      break;
+    case 2:
+      format = GL_RG;
+      break;
+    case 3:
+      format = GL_RGB;
+      break;
+    case 4:
+      format = GL_RGBA;
+      break;
+    default:
+      format = GL_RGB;
+      break;
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, format, texture_info.width,
+                 texture_info.height, 0, format, GL_UNSIGNED_BYTE,
                  texture_info.data);
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

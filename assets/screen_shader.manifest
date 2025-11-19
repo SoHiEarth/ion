@@ -1,3 +1,3 @@
 relative:true
-vertex_path:/screen.vert
-fragment_path:/screen.frag
+vertex_path:/screen_shader.vert
+fragment_path:/screen_shader.frag

@@ -45,16 +45,27 @@ std::map<std::string, std::string> ParseManifest(std::string_view path) {
 template <>
 std::shared_ptr<Texture>
 AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context &context) {
+  printf("Loading texture from manifest: %s\n", manifest.data());
   TextureInfo info{};
   auto manifest_info = ParseManifest(manifest);
+  if (manifest_info["flip"] == "true") {
+    stbi_set_flip_vertically_on_load(true);
+  }
+  std::string image_path;
   if (manifest_info["relative"] == "true") {
     auto directory =
         std::filesystem::path(manifest).parent_path().generic_string();
-    info.data = stbi_load((directory + manifest_info["path"]).data(),
-                          &info.width, &info.height, &info.nr_channels, 0);
+    image_path = directory + manifest_info["path"];
   } else {
-    info.data = stbi_load(manifest_info["path"].data(), &info.width,
-                          &info.height, &info.nr_channels, 0);
+    image_path = manifest_info["path"];
+  }
+  printf("Loading texture image: %s\n", image_path.c_str());
+  info.data = stbi_load(image_path.c_str(), &info.width, &info.height, 
+                        &info.nr_channels, manifest_info["force_channels"] == "true" ?
+                        std::stoi(manifest_info["channels"]) : 0);
+  if (!info.data) {
+    const char* reason = stbi_failure_reason();
+    printf("Failed to load texture image: %s\n", reason);
   }
 
   auto texture = std::make_shared<Texture>();
@@ -62,6 +73,20 @@ AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context &context) {
   stbi_image_free(info.data);
   textures.push_back(texture);
   return texture;
+}
+
+template <>
+std::shared_ptr<TexturePack>
+AssetSystem::LoadAsset<TexturePack>(std::string_view manifest, Context &context) {
+  TexturePack pack{};
+  auto manifest_info = ParseManifest(manifest);
+  std::string directory;
+  if (manifest_info["relative"] == "true") {
+    directory = std::filesystem::path(manifest).parent_path().generic_string();
+  }
+  pack.color = LoadAsset<Texture>(directory + manifest_info["color"], context);
+  pack.normal = LoadAsset<Texture>(directory + manifest_info["normal"], context);
+  return std::make_shared<TexturePack>(pack);
 }
 
 template <>
@@ -93,11 +118,18 @@ void AssetSystem::Inspector() {
       LoadAsset<Texture>(file_char, Context::Get());
     }
   }
+  if (ImGui::Button("Load Texture Pack from Manifest")) {
+    auto file_char = tinyfd_openFileDialog(
+        "Load Texture Pack From Manifest", nullptr, 0, nullptr, nullptr, false);
+    if (file_char) {
+      LoadAsset<TexturePack>(file_char, Context::Get());
+    }
+  }
   for (int i = 0; i < textures.size(); i++) {
     ImGui::PushID(i);
     ImGui::Image(textures[i]->texture, ImVec2(100, 100));
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("TEXTURE_ASSET", &textures[i], sizeof(Texture));
+      ImGui::SetDragDropPayload("TEXTURE_ASSET", &textures[i], sizeof(std::shared_ptr<Texture>&));
       ImGui::EndDragDropSource();
     }
     ImGui::PopID();

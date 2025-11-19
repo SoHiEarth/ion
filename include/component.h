@@ -22,7 +22,8 @@ struct PhysicsBody {
 };
 
 struct Renderable {
-  std::shared_ptr<Texture> texture;
+  std::shared_ptr<Texture> color;
+  std::shared_ptr<Texture> normal;
   std::shared_ptr<Shader> shader;
   std::shared_ptr<GPUData> data;
 };

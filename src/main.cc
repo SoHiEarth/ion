@@ -63,19 +63,27 @@ int main(int argc, char **argv) {
   auto framebuffer_info = FramebufferInfo{
       .recreate_on_resize = true
   };
+  auto color_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto normal_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
   auto framebuffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
 
   auto camera_entity = world.CreateEntity();
   world.AddComponent<Camera>(camera_entity, Camera{});
   auto entity = world.CreateEntity();
   auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
-      "assets/sprite_shader.manifest", Context::Get());
+      "assets/texture_shader.manifest", Context::Get());
+  auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+      "assets/deferred_shader.manifest", Context::Get());
   auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
       "assets/screen_shader.manifest", Context::Get());
   auto texture = Context::Get().asset_sys.LoadAsset<Texture>(
       "assets/test_texture.manifest", Context::Get());
+  auto default_texture = Context::Get().asset_sys.LoadAsset<Texture>(
+      "assets/default_texture.manifest", Context::Get());
+  auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+      "assets/texture_shader.manifest", Context::Get());
   world.AddComponent<Transform>(entity, Transform{});
-  world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
+  world.AddComponent<Renderable>(entity, Renderable{texture, texture, shader, data});
   auto light_entity = world.CreateEntity();
   world.AddComponent<Transform>(light_entity, Transform{glm::vec2(0.0f), 0, glm::vec2(1.0f), 0.0f});
   world.AddComponent<Light>(light_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
@@ -88,6 +96,19 @@ int main(int argc, char **argv) {
     Context::Get().physics_sys.Update();
     Context::Get().asset_sys.Inspector();
 
+    {
+      ImGui::Begin("Framebuffers");
+      ImGui::Image(color_buffer->colorbuffer,
+                   ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
+      ImGui::SameLine();
+      ImGui::Image(normal_buffer->colorbuffer,
+                    ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
+      ImGui::SameLine();
+      ImGui::Image(framebuffer->colorbuffer,
+                   ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
+      ImGui::End();
+    }
+
     // World Inspector - Due to be moved to a function soon
     {
       ImGui::Begin("World");
@@ -95,6 +116,11 @@ int main(int argc, char **argv) {
         if (ImGui::Button("Create Entity")) {
           auto new_entity = world.CreateEntity();
           world.AddComponent<Transform>(new_entity, Transform{});
+        }
+        if (ImGui::Button("Add Light")) {
+          auto new_entity = world.CreateEntity();
+          world.AddComponent<Transform>(new_entity, Transform{});
+          world.AddComponent<Light>(new_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
         }
       }
       auto& transforms = world.GetComponentSet<Transform>();
@@ -111,7 +137,24 @@ int main(int argc, char **argv) {
           if (world.ContainsComponent<Renderable>(id)) {
             if (ImGui::TreeNode("Renderable")) {
               auto renderable = world.GetComponent<Renderable>(id);
-              ImGui::Image(renderable->texture->texture, ImVec2(100, 100));
+              ImGui::Image(renderable->color->texture, ImVec2(100, 100));
+              if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_ASSET")) {
+                  IM_ASSERT(payload->DataSize == sizeof(std::shared_ptr<Texture>));
+                  std::shared_ptr<Texture> dropped_texture = *(std::shared_ptr<Texture>*)payload->Data;
+                  renderable->color = dropped_texture;
+                }
+                ImGui::EndDragDropTarget();
+              }
+              ImGui::Image(renderable->normal->texture, ImVec2(100, 100));
+              if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_ASSET")) {
+                  IM_ASSERT(payload->DataSize == sizeof(std::shared_ptr<Texture>));
+                  std::shared_ptr<Texture> dropped_texture = *(std::shared_ptr<Texture>*)payload->Data;
+                  renderable->normal = dropped_texture;
+                }
+                ImGui::EndDragDropTarget();
+              }
               ImGui::TreePop();
             }
           }
@@ -138,13 +181,18 @@ int main(int argc, char **argv) {
       ImGui::End();
     }
     
-    Context::Get().render_sys.UnbindFramebuffer();
-    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
+    Context::Get().render_sys.BindFramebuffer(color_buffer);
+    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    Context::Get().render_sys.DrawWorld(world, RENDER_PASS_COLOR);
+    Context::Get().render_sys.BindFramebuffer(normal_buffer);
+    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    Context::Get().render_sys.DrawWorld(world, RENDER_PASS_NORMAL);
     Context::Get().render_sys.BindFramebuffer(framebuffer);
-    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    Context::Get().render_sys.DrawWorld(world);
+    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    Context::Get().render_sys.Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
     Context::Get().render_sys.UnbindFramebuffer();
-    Context::Get().render_sys.Render(framebuffer, screen_data, screen_shader);
+    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
+    Context::Get().render_sys.DrawFramebuffer(framebuffer, screen_shader, screen_data);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     Context::Get().render_sys.Present();

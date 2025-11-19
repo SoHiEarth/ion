@@ -1,0 +1,3 @@
+relative:true
+vertex_path:/texture_shader.vert
+fragment_path:/texture_shader.frag
