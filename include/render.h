@@ -67,7 +67,7 @@ public:
   void DrawWorld(World&);
   void DestroyShader(std::shared_ptr<Shader>);
   void Clear(glm::vec4);
-  int Render();
   int Render(std::shared_ptr<Framebuffer>, std::shared_ptr<GPUData>, std::shared_ptr<Shader>);
+  void Present();
   int Quit();
 };

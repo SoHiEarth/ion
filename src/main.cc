@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
   world.AddComponent<Transform>(entity, Transform{});
   world.AddComponent<Renderable>(entity, Renderable{texture, shader, data});
   auto light_entity = world.CreateEntity();
-  world.AddComponent<Transform>(light_entity, Transform{glm::vec2(2.0f, 2.0f), 0, glm::vec2(1.0f), 0.0f});
-  world.AddComponent<Light>(light_entity, Light{1.0f, 0.1f, 0.1f});
+  world.AddComponent<Transform>(light_entity, Transform{glm::vec2(0.0f), 0, glm::vec2(1.0f), 0.0f});
+  world.AddComponent<Light>(light_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
 
   while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
     glfwPollEvents();
@@ -91,6 +91,12 @@ int main(int argc, char **argv) {
     // World Inspector - Due to be moved to a function soon
     {
       ImGui::Begin("World");
+      if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::Button("Create Entity")) {
+          auto new_entity = world.CreateEntity();
+          world.AddComponent<Transform>(new_entity, Transform{});
+        }
+      }
       auto& transforms = world.GetComponentSet<Transform>();
       for (auto &[id, transform] : transforms) {
         ImGui::PushID(id);
@@ -122,7 +128,6 @@ int main(int argc, char **argv) {
               ImGui::ColorEdit3("Color", glm::value_ptr(light->color), 0.01f);
               ImGui::DragFloat("Intensity", &light->intensity, 0.01f);
               ImGui::DragFloat("Radial Falloff", &light->radial_falloff, 0.01f);
-              // ImGui::DragFloat("Angular Falloff", &light->angular_falloff, 0.01f);
               ImGui::TreePop();
             }
           }
@@ -132,13 +137,17 @@ int main(int argc, char **argv) {
       }
       ImGui::End();
     }
-
-    ImGui::Render();
+    
+    Context::Get().render_sys.UnbindFramebuffer();
+    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
     Context::Get().render_sys.BindFramebuffer(framebuffer);
     Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
     Context::Get().render_sys.DrawWorld(world);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    Context::Get().render_sys.UnbindFramebuffer();
     Context::Get().render_sys.Render(framebuffer, screen_data, screen_shader);
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    Context::Get().render_sys.Present();
   }
   Context::Get().physics_sys.Quit();
   Context::Get().render_sys.DestroyData(data);

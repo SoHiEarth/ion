@@ -18,9 +18,9 @@
 #include <string>
 
 glm::vec2 window_size = glm::vec2(800, 600);
+int render_scale = 4;
 
 void SizeCallback(GLFWwindow *window, int w, int h) {
-  glViewport(0, 0, w, h);
   window_size.x = w;
   window_size.y = h;
   Context::Get().render_sys.UpdateFramebuffers();
@@ -50,7 +50,6 @@ int RenderSystem::Init() {
     return -1;
   }
   glfwSetFramebufferSizeCallback(window, SizeCallback);
-  glViewport(0, 0, window_size.x, window_size.y);
   return 0;
 }
 
@@ -135,20 +134,15 @@ void RenderSystem::Clear(glm::vec4 color) {
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int RenderSystem::Render() {
-  glfwSwapBuffers(window);
-  return 0;
-}
-
 int RenderSystem::Render(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader) {
   shader->Use();
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, static_cast<int>(window_size.x), static_cast<int>(window_size.y));
   glClear(GL_COLOR_BUFFER_BIT);
   glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
   BindData(data);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   UnbindData();
-  glfwSwapBuffers(window);
   return 0;
 }
 
@@ -203,7 +197,6 @@ void RenderSystem::DrawWorld(World &world) {
           renderable->shader->SetUniform("lights[" + std::to_string(i) + "].position", world.GetComponent<Transform>(light_entity)->position);
           renderable->shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light.intensity);
           renderable->shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light.radial_falloff);
-          renderable->shader->SetUniform("lights[" + std::to_string(i) + "].angular_falloff", light.angular_falloff);
           renderable->shader->SetUniform("lights[" + std::to_string(i) + "].color", light.color);
         }
         glBindTexture(GL_TEXTURE_2D, renderable->texture->texture);
@@ -225,8 +218,8 @@ unsigned int RenderSystem::ConfigureTexture(TextureInfo texture_info) {
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   } else {
     printf("%d\n", TEXTURE_LOAD_FAIL);
   }
@@ -240,9 +233,9 @@ std::shared_ptr<Framebuffer> RenderSystem::CreateFramebuffer(FramebufferInfo& in
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
   glGenTextures(1, &framebuffer->colorbuffer);
   glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x), static_cast<int>(window_size.y), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -259,9 +252,7 @@ void RenderSystem::UpdateFramebuffers() {
   for (auto& framebuffer : framebuffers) {
     if (framebuffer->recreate_on_resize) {
       glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x), static_cast<int>(window_size.y), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
       glBindTexture(GL_TEXTURE_2D, 0);
     }
   }
@@ -269,8 +260,13 @@ void RenderSystem::UpdateFramebuffers() {
 
 void RenderSystem::BindFramebuffer(std::shared_ptr<Framebuffer> framebuffer) {
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
+  glViewport(0, 0, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale);
 }
 
 void RenderSystem::UnbindFramebuffer() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void RenderSystem::Present() {
+  glfwSwapBuffers(window);
 }
