@@ -1,4 +1,4 @@
-name: CMake + Vcpkg + Ninja on Ubuntu and Windows
+name: CMake + Vcpkg + Ninja on Windows
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
