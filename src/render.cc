@@ -15,12 +15,13 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <stb_image.h>
+#include "world.h"
 #include <string>
 
 glm::vec2 window_size = glm::vec2(800, 600);
 int render_scale = 4;
 
-void SizeCallback(GLFWwindow *window, int w, int h) {
+static void SizeCallback(GLFWwindow *window, int w, int h) {
   window_size.x = w;
   window_size.y = h;
   Context::Get().render_sys.UpdateFramebuffers();
@@ -49,6 +50,7 @@ int RenderSystem::Init() {
     printf("%d\n", OPENGL_LOADER_FAIL);
     return -1;
   }
+  glEnable(GL_DEPTH_TEST);
   glfwSetFramebufferSizeCallback(window, SizeCallback);
   return 0;
 }
@@ -56,7 +58,7 @@ int RenderSystem::Init() {
 GLFWwindow *RenderSystem::GetWindow() { return window; }
 glm::vec2 RenderSystem::GetWindowSize() { return window_size; }
 
-GLenum GetTypeEnum(DataType type) {
+static GLenum GetTypeEnum(DataType type) {
   switch (type) {
   case DataType::INT:
     return GL_INT;
@@ -134,7 +136,7 @@ void RenderSystem::Clear(glm::vec4 color) {
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<Framebuffer> normal_fb, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, World& world) {
+int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<Framebuffer> normal_fb, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world) {
   shader->Use();
   glClear(GL_COLOR_BUFFER_BIT);
   glActiveTexture(GL_TEXTURE0);
@@ -143,9 +145,9 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, normal_fb->colorbuffer);
   shader->SetUniform("normal_texture", 1);
-  shader->SetUniform("light_count", static_cast<int>(world.GetComponentSet<Light>().size()));
+  shader->SetUniform("light_count", static_cast<int>(world->GetComponentSet<Light>().size()));
   
-  auto &all_cameras = world.GetComponentSet<Camera>();
+  auto &all_cameras = world->GetComponentSet<Camera>();
   glm::mat4 view = glm::mat4(1.0f);
   glm::mat4 projection = glm::mat4(1.0f);
   if (!all_cameras.empty()) {
@@ -154,9 +156,9 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
     projection = glm::perspective(glm::radians(45.0f), GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
   }
   
-  for (int i = 0; i < world.GetComponentSet<Light>().size(); i++) {
-    auto& [entity_id, light] = *std::next(world.GetComponentSet<Light>().begin(), i);
-    auto light_world_pos = glm::vec4(world.GetComponent<Transform>(entity_id)->position, 0.0f, 1.0f);
+  for (int i = 0; i < world->GetComponentSet<Light>().size(); i++) {
+    auto& [entity_id, light] = *std::next(world->GetComponentSet<Light>().begin(), i);
+    auto light_world_pos = glm::vec4(world->GetComponent<Transform>(entity_id)->position, 0.0f, 1.0f);
     auto light_clip_pos = projection * view * light_world_pos;
     auto light_ndc_pos = glm::vec2(light_clip_pos) / light_clip_pos.w;
     
@@ -194,51 +196,49 @@ int RenderSystem::Quit() {
   return 0;
 }
 
-glm::mat4 GetModelFromTransform(Transform transform) {
+static glm::mat4 GetModelFromTransform(Transform transform) {
   auto model = glm::mat4(1.0f);
-  model = glm::translate(
-      model, glm::vec3(transform.position, transform.layer * 0.01f));
-  model = glm::rotate(model, glm::radians(transform.rotation),
-                      glm::vec3(0.0f, 0.0f, 1.0f));
-  model = glm::scale(model, glm::vec3(transform.scale, 1));
+  model = glm::translate(model, glm::vec3(transform.position.x, transform.position.y, transform.layer));
+  model = glm::rotate(model, glm::radians(transform.rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::scale(model, glm::vec3(transform.scale.x, transform.scale.y, 1));
   return model;
 }
 
-void RenderSystem::DrawWorld(World &world, RenderPass pass) {
-  auto &all_cameras = world.GetComponentSet<Camera>();
-  auto &all_transforms = world.GetComponentSet<Transform>();
+void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
+  auto &all_cameras = world->GetComponentSet<Camera>();
+  auto &all_transforms = world->GetComponentSet<Transform>();
   for (auto &[entity_id, camera] : all_cameras) {
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::translate(view, -glm::vec3{camera.position, 3.0});
     glm::mat4 projection;
-    // if (camera.mode == ProjectionMode::PERSPECTIVE) {
+    /* if (camera.mode == ProjectionMode::PERSPECTIVE) {
     projection =
         glm::perspective(glm::radians(45.0f),
                          GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
-    /*
-    } else {
+    } else {*/
     float ortho_scale = 10.0f;
-    projection = glm::ortho(-ortho_scale * (render_sys.GetWindowSize().x /
-                                            render_sys.GetWindowSize().y),
-                            ortho_scale * (render_sys.GetWindowSize().x /
-                                           render_sys.GetWindowSize().y),
+    projection = glm::ortho(-ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
+      Context::Get().render_sys.GetWindowSize().y),
+                            ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
+                              Context::Get().render_sys.GetWindowSize().y),
                             -ortho_scale, ortho_scale, 0.1f, 100.0f);
-    } */
+    //}
     for (auto &[entity_id, transform] : all_transforms) {
-      auto renderable = world.GetComponent<Renderable>(entity_id);
+      auto renderable = world->GetComponent<Renderable>(entity_id);
       if (renderable) {
         BindData(renderable->data);
         renderable->shader->Use();
+				renderable->shader->SetUniform("layer", transform.layer);
         renderable->shader->SetUniform("view", view);
         renderable->shader->SetUniform("projection", projection);
-        auto model = GetModelFromTransform(transform);
-        renderable->shader->SetUniform("model", model);
+        renderable->shader->SetUniform("model", GetModelFromTransform(transform));
         glActiveTexture(GL_TEXTURE0);
         if (pass == RENDER_PASS_COLOR) {
           glBindTexture(GL_TEXTURE_2D, renderable->color->texture);
         } else if (pass == RENDER_PASS_NORMAL) {
           glBindTexture(GL_TEXTURE_2D, renderable->normal->texture);
         }
+        renderable->shader->SetUniform("sample", 0);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         UnbindData();
       }

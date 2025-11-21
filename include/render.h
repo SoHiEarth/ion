@@ -70,10 +70,10 @@ public:
   void UnbindFramebuffer();
   void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>, std::shared_ptr<GPUData> quad);
 
-  void DrawWorld(World&, RenderPass);
+  void DrawWorld(std::shared_ptr<World>, RenderPass);
   void DestroyShader(std::shared_ptr<Shader>);
   void Clear(glm::vec4);
-  int Render(std::shared_ptr<Framebuffer> color_framebuffer, std::shared_ptr<Framebuffer> normal_framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, World& world);
+  int Render(std::shared_ptr<Framebuffer> color_framebuffer, std::shared_ptr<Framebuffer> normal_framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world);
   void Present();
   int Quit();
 };

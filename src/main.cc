@@ -11,10 +11,10 @@
 #include <vector>
 
 std::vector<float> vertices = {
-   0.5f,  0.5f, 1.0f, 0.0f,
-   0.5f, -0.5f, 1.0f, 1.0f,
-  -0.5f, -0.5f, 0.0f, 1.0f,
-  -0.5f,  0.5f, 0.0f, 0.0f
+   0.5f,  0.5f, 0.0f, 1.0f, 0.0f,
+   0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
+  -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+  -0.5f,  0.5f, 0.0f, 0.0f, 0.0f
 },
 screen_vertices = {
     1.0f,  1.0f,  1.0f, 1.0f,
@@ -26,23 +26,23 @@ screen_vertices = {
 std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
 
 int main(int argc, char **argv) {
-  World world;
+  auto world = Context::Get().asset_sys.LoadAsset<World>("world.manifest", Context::Get());
   Context::Get().render_sys.Init();
   Context::Get().physics_sys.Init();
 
   AttributePointer position_pointer {
-    .size = 2,
+    .size = 3,
     .type = DataType::FLOAT,
     .normalized = false,
-    .stride = 4 * sizeof(float),
+    .stride = 5 * sizeof(float),
     .pointer = (void *)0
   };
   AttributePointer texture_pointer {
     .size = 2,
     .type = DataType::FLOAT,
     .normalized = false,
-    .stride = 4 * sizeof(float),
-    .pointer = (void *)(2 * sizeof(float))
+    .stride = 5 * sizeof(float),
+    .pointer = (void *)(3 * sizeof(float))
   };
   DataDescriptor data_desc {
     .pointers = {position_pointer, texture_pointer},
@@ -52,8 +52,22 @@ int main(int argc, char **argv) {
   };
   auto data = Context::Get().render_sys.CreateData(data_desc);
 
+  AttributePointer screen_position_pointer {
+    .size = 2,
+    .type = DataType::FLOAT,
+    .normalized = false,
+    .stride = 4 * sizeof(float),
+    .pointer = (void *)0
+	};
+  AttributePointer screen_texture_pointer {
+    .size = 2,
+    .type = DataType::FLOAT,
+    .normalized = false,
+    .stride = 4 * sizeof(float),
+    .pointer = (void *)(2 * sizeof(float))
+	};
   DataDescriptor screen_data_desc {
-    .pointers = {position_pointer, texture_pointer},
+    .pointers = {screen_position_pointer, screen_texture_pointer},
     .element_enabled = true,
     .vertices = screen_vertices,
     .indices = indices
@@ -67,9 +81,9 @@ int main(int argc, char **argv) {
   auto normal_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
   auto framebuffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
 
-  auto camera_entity = world.CreateEntity();
-  world.AddComponent<Camera>(camera_entity, Camera{});
-  auto entity = world.CreateEntity();
+  auto camera_entity = world->CreateEntity();
+  world->AddComponent<Camera>(camera_entity, Camera{});
+  auto entity = world->CreateEntity();
   auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
       "assets/texture_shader.manifest", Context::Get());
   auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
@@ -82,11 +96,11 @@ int main(int argc, char **argv) {
       "assets/default_texture.manifest", Context::Get());
   auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
       "assets/texture_shader.manifest", Context::Get());
-  world.AddComponent<Transform>(entity, Transform{});
-  world.AddComponent<Renderable>(entity, Renderable{texture, texture, shader, data});
-  auto light_entity = world.CreateEntity();
-  world.AddComponent<Transform>(light_entity, Transform{glm::vec2(0.0f), 0, glm::vec2(1.0f), 0.0f});
-  world.AddComponent<Light>(light_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
+  world->AddComponent<Transform>(entity, Transform{});
+  world->AddComponent<Renderable>(entity, Renderable{texture, texture, shader, data});
+  auto light_entity = world->CreateEntity();
+  world->AddComponent<Transform>(light_entity, Transform{glm::vec2(0.0f), 0, glm::vec2(1.0f), 0.0f});
+  world->AddComponent<Light>(light_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
 
   while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
     glfwPollEvents();
@@ -113,17 +127,18 @@ int main(int argc, char **argv) {
     {
       ImGui::Begin("World");
       if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
-        if (ImGui::Button("Create Entity")) {
-          auto new_entity = world.CreateEntity();
-          world.AddComponent<Transform>(new_entity, Transform{});
-        }
         if (ImGui::Button("Add Light")) {
-          auto new_entity = world.CreateEntity();
-          world.AddComponent<Transform>(new_entity, Transform{});
-          world.AddComponent<Light>(new_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
+          auto new_entity = world->CreateEntity();
+          world->AddComponent<Transform>(new_entity, Transform{});
+          world->AddComponent<Light>(new_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
         }
+        if (ImGui::Button("Add Renderable")) {
+          auto new_entity = world->CreateEntity();
+          world->AddComponent<Transform>(new_entity, Transform{});
+          world->AddComponent<Renderable>(new_entity, Renderable{default_texture, default_texture, default_shader, data});
+				}
       }
-      auto& transforms = world.GetComponentSet<Transform>();
+      auto& transforms = world->GetComponentSet<Transform>();
       for (auto &[id, transform] : transforms) {
         ImGui::PushID(id);
         if (ImGui::CollapsingHeader("Object", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -134,9 +149,9 @@ int main(int argc, char **argv) {
             ImGui::DragFloat("Rotation", &transform.rotation, 0.1f);
             ImGui::TreePop();
           }
-          if (world.ContainsComponent<Renderable>(id)) {
+          if (world->ContainsComponent<Renderable>(id)) {
             if (ImGui::TreeNode("Renderable")) {
-              auto renderable = world.GetComponent<Renderable>(id);
+              auto renderable = world->GetComponent<Renderable>(id);
               ImGui::Image(renderable->color->texture, ImVec2(100, 100));
               if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_ASSET")) {
@@ -158,16 +173,16 @@ int main(int argc, char **argv) {
               ImGui::TreePop();
             }
           }
-          if (world.ContainsComponent<Camera>(id)) {
+          if (world->ContainsComponent<Camera>(id)) {
             if (ImGui::TreeNode("Camera")) {
-              auto camera = world.GetComponent<Camera>(id);
+              auto camera = world->GetComponent<Camera>(id);
               ImGui::Text("Camera Component");
               ImGui::TreePop();
             }
           }
-          if (world.ContainsComponent<Light>(id)) {
+          if (world->ContainsComponent<Light>(id)) {
             if (ImGui::TreeNode("Light")) {
-              auto light = world.GetComponent<Light>(id);
+              auto light = world->GetComponent<Light>(id);
               ImGui::ColorEdit3("Color", glm::value_ptr(light->color), 0.01f);
               ImGui::DragFloat("Intensity", &light->intensity, 0.01f);
               ImGui::DragFloat("Radial Falloff", &light->radial_falloff, 0.01f);

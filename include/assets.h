@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include "world.h"
 #include <vector>
 
 struct Texture;

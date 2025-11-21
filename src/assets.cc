@@ -20,7 +20,7 @@ static std::string Trim(std::string s) {
 }
 
 // Expects format key:value
-std::map<std::string, std::string> ParseManifest(std::string_view path) {
+static std::map<std::string, std::string> ParseManifest(std::string_view path) {
   std::map<std::string, std::string> values{};
   std::ifstream file{};
   file.open(path.data());
@@ -109,6 +109,11 @@ AssetSystem::LoadAsset<Shader>(std::string_view manifest, Context &context) {
   }
 }
 
+template <>
+std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest, Context& context) {
+	auto world = std::make_shared<World>();
+  return world;
+}
 void AssetSystem::Inspector() {
   ImGui::Begin("Asset System");
   if (ImGui::Button("Load Image from Manifest")) {
