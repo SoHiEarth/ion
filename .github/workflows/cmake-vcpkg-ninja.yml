@@ -37,3 +37,14 @@ jobs:
       with:
         configurePreset: "ninja-multi-vcpkg"
         buildPreset: "release"
+
+    - name: Release built file
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Pre-release build"
+        files: |
+          *.exe
+          *.dll
