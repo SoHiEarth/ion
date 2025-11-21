@@ -1,4 +1,6 @@
 {
+  "name": "ion",
+  "version-string": "1.0.0",
   "dependencies": [
     "box2d",
     "glad",
