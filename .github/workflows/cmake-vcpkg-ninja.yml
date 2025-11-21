@@ -26,6 +26,9 @@ jobs:
       with:
         runVcpkgInstall: true
         vcpkgJsonGlob: "./vcpkg.json"
+    - name: Install dependencies
+      if: runner.os == "Linux"
+      run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
     - name: Run CMake
       uses: lukka/run-cmake@v10
       with:
