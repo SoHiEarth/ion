@@ -46,5 +46,6 @@ jobs:
         prerelease: true
         title: "Pre-release build"
         files: |
-          *.exe
-          *.dll
+          ${{ github.workspace }}/builds/ninja-multi-vcpkg/Release/ion.exe
+          ${{ github.workspace }}/builds/ninja-multi-vcpkg/Release/*.dll
+          
