@@ -4,10 +4,12 @@
 #include "texture.h"
 #include "render.h"
 #include "world.h"
+#include "script.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <imgui_stdlib.h>
 #include <vector>
 
 std::vector<float> vertices = {
@@ -29,6 +31,7 @@ int main(int argc, char **argv) {
   auto world = Context::Get().asset_sys.LoadAsset<World>("world.manifest", Context::Get());
   Context::Get().render_sys.Init();
   Context::Get().physics_sys.Init();
+	Context::Get().script_sys.Init();
 
   AttributePointer position_pointer {
     .size = 3,
@@ -107,6 +110,7 @@ int main(int argc, char **argv) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    Context::Get().script_sys.Update(world);
     Context::Get().physics_sys.Update();
     Context::Get().asset_sys.Inspector();
 
@@ -137,6 +141,10 @@ int main(int argc, char **argv) {
           world->AddComponent<Transform>(new_entity, Transform{});
           world->AddComponent<Renderable>(new_entity, Renderable{default_texture, default_texture, default_shader, data});
 				}
+        if (ImGui::Button("Add Script")) {
+          auto new_entity = world->CreateEntity();
+          world->AddComponent<Script>(new_entity, Script{ "", "main", {} });
+        }
       }
       auto& transforms = world->GetComponentSet<Transform>();
       for (auto &[id, transform] : transforms) {
@@ -189,6 +197,42 @@ int main(int argc, char **argv) {
               ImGui::TreePop();
             }
           }
+          if (world->ContainsComponent<Script>(id)) {
+            static std::string param_key;
+            static std::string param_value;
+            if (ImGui::TreeNode("Script")) {
+              auto script = world->GetComponent<Script>(id);
+              ImGui::InputText("Path", &script->path);
+              ImGui::InputText("Module", &script->module_name);
+							ImGui::Text("Parameters:");
+              for (auto& [key, value] : script->parameters) {
+                ImGui::Text("%s: %s", key.c_str(), value.c_str());
+							}
+              if (ImGui::Button("Add Parameter")) {
+								param_key.clear();
+								param_value.clear();
+								ImGui::OpenPopup("AddParameterPopup");
+							}
+              bool open = true;
+              if (ImGui::BeginPopupModal("AddParameterPopup", &open))
+              {
+								ImGui::Text("Add Parameter");
+								ImGui::InputText("Key", &param_key);
+								ImGui::InputText("Value", &param_value);
+								if (ImGui::Button("Add")) {
+									if (!param_key.empty()) {
+										script->parameters[param_key] = param_value;
+									}
+									ImGui::CloseCurrentPopup();
+								}
+                ImGui::SameLine();
+                if (ImGui::Button("Close"))
+                  ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+              }
+              ImGui::TreePop();
+            }
+          }
         }
         ImGui::PopID();
         ImGui::Separator();
@@ -215,6 +259,8 @@ int main(int argc, char **argv) {
   Context::Get().physics_sys.Quit();
   Context::Get().render_sys.DestroyData(data);
   Context::Get().render_sys.DestroyShader(shader);
+	Context::Get().script_sys.Quit();
+  Context::Get().physics_sys.Quit();
   Context::Get().render_sys.Quit();
   return 0;
 }

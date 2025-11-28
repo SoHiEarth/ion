@@ -15,6 +15,7 @@ private:
   std::map<EntityID, PhysicsBody> physics_bodies;
   std::map<EntityID, Camera> cameras;
   std::map<EntityID, Light> lights;
+	std::map<EntityID, Script> scripts;
 
 public:
   EntityID CreateEntity();

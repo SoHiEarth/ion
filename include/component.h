@@ -2,6 +2,8 @@
 #include <box2d/box2d.h>
 #include <glm/glm.hpp>
 #include <memory>
+#include <map>
+#include <string>
 
 struct Texture;
 struct Shader;
@@ -37,4 +39,11 @@ struct Light {
 struct Camera {
   glm::vec2 position = glm::vec2(0.0f, 0.0f);
   ProjectionMode mode = ProjectionMode::PERSPECTIVE;
+};
+
+
+struct Script {
+  std::string path;
+  std::string module_name;
+	std::map<std::string, std::string> parameters;
 };

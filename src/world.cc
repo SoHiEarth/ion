@@ -22,6 +22,10 @@ template <> std::map<EntityID, Light> &World::GetComponentSet<Light>() {
   return lights;
 }
 
+template <> std::map<EntityID, Script> &World::GetComponentSet<Script>() {
+  return scripts;
+}
+
 EntityID World::CreateEntity() { return next_id++; }
 
 void World::DestroyEntity(EntityID entity) {

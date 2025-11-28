@@ -8,6 +8,7 @@ find_package(ImGui CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
+find_package(Python3 COMPONENTS Development REQUIRED)
 add_executable(ion)
 target_compile_features(ion PRIVATE cxx_std_20)
 target_sources(ion PRIVATE
@@ -15,11 +16,11 @@ target_sources(ion PRIVATE
   src/context.cc
   src/main.cc
   src/shader.cc
+  src/script.cc
   src/render.cc
   src/texture.cc
   src/physics.cc
-  src/world.cc
-)
+  src/world.cc)
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 target_include_directories(ion PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -32,4 +33,5 @@ target_link_libraries(ion PRIVATE
     imgui::imgui
     OpenGL::GL
     tinyfiledialogs::tinyfiledialogs
+    Python3::Python
 )
