@@ -11,6 +11,7 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_stdlib.h>
 #include <vector>
+#include <format>
 
 std::vector<float> vertices = {
    0.5f,  0.5f, 0.0f, 1.0f, 0.0f,
@@ -83,27 +84,33 @@ int main(int argc, char **argv) {
   auto color_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
   auto normal_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
   auto framebuffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/texture_shader.manifest", Context::Get());
+  auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/deferred_shader.manifest", Context::Get());
+  auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/screen_shader.manifest", Context::Get());
+  auto texture = Context::Get().asset_sys.LoadAsset<Texture>(
+    "assets/test_texture.manifest", Context::Get());
+  auto default_texture = Context::Get().asset_sys.LoadAsset<Texture>(
+    "assets/default_texture.manifest", Context::Get());
+  auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/texture_shader.manifest", Context::Get());
 
   auto camera_entity = world->CreateEntity();
-  world->AddComponent<Camera>(camera_entity, Camera{});
+  world->NewComponent<Camera>(camera_entity);
   auto entity = world->CreateEntity();
-  auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
-      "assets/texture_shader.manifest", Context::Get());
-  auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-      "assets/deferred_shader.manifest", Context::Get());
-  auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-      "assets/screen_shader.manifest", Context::Get());
-  auto texture = Context::Get().asset_sys.LoadAsset<Texture>(
-      "assets/test_texture.manifest", Context::Get());
-  auto default_texture = Context::Get().asset_sys.LoadAsset<Texture>(
-      "assets/default_texture.manifest", Context::Get());
-  auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-      "assets/texture_shader.manifest", Context::Get());
-  world->AddComponent<Transform>(entity, Transform{});
-  world->AddComponent<Renderable>(entity, Renderable{texture, texture, shader, data});
+  auto renderable = world->NewComponent<Renderable>(entity);
+	renderable->color = texture;
+  renderable->normal = texture;
+	renderable->shader = shader;
+	renderable->data = data;
+
   auto light_entity = world->CreateEntity();
-  world->AddComponent<Transform>(light_entity, Transform{glm::vec2(0.0f), 0, glm::vec2(1.0f), 0.0f});
-  world->AddComponent<Light>(light_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
+	auto light = world->NewComponent<Light>(light_entity);
+	light->intensity = 1.0f;
+	light->radial_falloff = 1.0f;
+	light->color = glm::vec3(1.0f, 1.0f, 1.0f);
 
   while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
     glfwPollEvents();
@@ -131,30 +138,61 @@ int main(int argc, char **argv) {
     {
       ImGui::Begin("World");
       if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
-        if (ImGui::Button("Add Light")) {
-          auto new_entity = world->CreateEntity();
-          world->AddComponent<Transform>(new_entity, Transform{});
-          world->AddComponent<Light>(new_entity, Light{1.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f)});
+        static EntityID selected_entity;
+        if (ImGui::Button("Add Component")) {
+					ImGui::OpenPopup("Add Component");
+          selected_entity = -1;
         }
-        if (ImGui::Button("Add Renderable")) {
-          auto new_entity = world->CreateEntity();
-          world->AddComponent<Transform>(new_entity, Transform{});
-          world->AddComponent<Renderable>(new_entity, Renderable{default_texture, default_texture, default_shader, data});
-				}
-        if (ImGui::Button("Add Script")) {
-          auto new_entity = world->CreateEntity();
-          world->AddComponent<Script>(new_entity, Script{ "", "main", {} });
+
+        if (ImGui::BeginPopupModal("Add Component")) {
+          ImGui::SeparatorText("Select Entity");
+					for (auto& [id, transform] : world->GetComponentSet<Transform>()) {
+						if (ImGui::Selectable(std::format("Entity {}", id).c_str(), selected_entity == id, ImGuiSelectableFlags_DontClosePopups)) {
+							selected_entity = id;
+						}
+					}
+
+          ImGui::SeparatorText("Select Component");
+          if (ImGui::Selectable("Physics Body") && selected_entity != -1) {
+            world->NewComponent<PhysicsBody>(selected_entity);
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::Selectable("Renderable") && selected_entity != -1) {
+            auto renderable_component = world->NewComponent<Renderable>(selected_entity);
+            renderable_component->color = default_texture;
+            renderable_component->normal = default_texture;
+            renderable_component->shader = default_shader;
+            renderable_component->data = data;
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::Selectable("Light") && selected_entity != -1) {
+            world->NewComponent<Light>(selected_entity);
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::Selectable("Script") && selected_entity != -1) {
+            auto script_component = world->NewComponent<Script>(selected_entity);
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::Selectable("Camera") && selected_entity != -1) {
+            auto script_component = world->NewComponent<Camera>(selected_entity);
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+          }
+          ImGui::EndPopup();
         }
       }
+
       auto& transforms = world->GetComponentSet<Transform>();
       for (auto &[id, transform] : transforms) {
         ImGui::PushID(id);
-        if (ImGui::CollapsingHeader("Object", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader(std::format("Entity {}", id).c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
           if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::DragFloat2("Position", glm::value_ptr(transform.position), 0.1f);
-            ImGui::DragInt("Layer", &transform.layer);
-            ImGui::DragFloat2("Scale", glm::value_ptr(transform.scale), 0.1f);
-            ImGui::DragFloat("Rotation", &transform.rotation, 0.1f);
+            ImGui::DragFloat2("Position", glm::value_ptr(transform->position), 0.1f);
+            ImGui::DragInt("Layer", &transform->layer);
+            ImGui::DragFloat2("Scale", glm::value_ptr(transform->scale), 0.1f);
+            ImGui::DragFloat("Rotation", &transform->rotation, 0.1f);
             ImGui::TreePop();
           }
           if (world->ContainsComponent<Renderable>(id)) {
@@ -213,9 +251,8 @@ int main(int argc, char **argv) {
 								param_value.clear();
 								ImGui::OpenPopup("AddParameterPopup");
 							}
-              bool open = true;
-              if (ImGui::BeginPopupModal("AddParameterPopup", &open))
-              {
+              bool add_parameter_open = true;
+              if (ImGui::BeginPopupModal("AddParameterPopup", &add_parameter_open)) {
 								ImGui::Text("Add Parameter");
 								ImGui::InputText("Key", &param_key);
 								ImGui::InputText("Value", &param_value);

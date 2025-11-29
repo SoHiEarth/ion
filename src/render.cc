@@ -15,15 +15,19 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <stb_image.h>
-#include "world.h"
 #include <string>
 
-glm::vec2 window_size = glm::vec2(800, 600);
-int render_scale = 4;
+class RenderSystemConfig {
+  public:
+  glm::vec2 window_size = glm::vec2(800, 600);
+	int render_scale = 4;
+	float camera_z = 3.0f;
+};
+static RenderSystemConfig r_config;
 
 static void SizeCallback(GLFWwindow *window, int w, int h) {
-  window_size.x = w;
-  window_size.y = h;
+  r_config.window_size.x = w;
+  r_config.window_size.y = h;
   Context::Get().render_sys.UpdateFramebuffers();
 }
 
@@ -35,7 +39,7 @@ int RenderSystem::Init() {
 #ifdef __APPLE__
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-  window = glfwCreateWindow(window_size.x, window_size.y, "ion", NULL, NULL);
+  window = glfwCreateWindow(r_config.window_size.x, r_config.window_size.y, "ion", NULL, NULL);
   if (window == nullptr) {
     printf("%d\n", WINDOW_CREATE_FAIL);
     glfwTerminate();
@@ -56,7 +60,7 @@ int RenderSystem::Init() {
 }
 
 GLFWwindow *RenderSystem::GetWindow() { return window; }
-glm::vec2 RenderSystem::GetWindowSize() { return window_size; }
+glm::vec2 RenderSystem::GetWindowSize() { return r_config.window_size; }
 
 static GLenum GetTypeEnum(DataType type) {
   switch (type) {
@@ -152,7 +156,7 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
   glm::mat4 projection = glm::mat4(1.0f);
   if (!all_cameras.empty()) {
     auto& camera = all_cameras.begin()->second;
-    view = glm::translate(view, -glm::vec3{camera.position, 3.0});
+    view = glm::translate(view, -glm::vec3{camera->position, 3.0});
     projection = glm::perspective(glm::radians(45.0f), GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
   }
   
@@ -163,9 +167,9 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
     auto light_ndc_pos = glm::vec2(light_clip_pos) / light_clip_pos.w;
     
     shader->SetUniform("lights[" + std::to_string(i) + "].position", light_ndc_pos);
-    shader->SetUniform("lights[" + std::to_string(i) + "].color", light.color);
-    shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light.intensity);
-    shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light.radial_falloff);
+    shader->SetUniform("lights[" + std::to_string(i) + "].color", light->color);
+    shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light->intensity);
+    shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light->radial_falloff);
   }  
   BindData(data);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -175,7 +179,7 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
 
 void RenderSystem::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> data) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, static_cast<int>(window_size.x), static_cast<int>(window_size.y));
+  glViewport(0, 0, static_cast<int>(r_config.window_size.x), static_cast<int>(r_config.window_size.y));
   glClear(GL_COLOR_BUFFER_BIT);
   shader->Use();
   BindData(data);
@@ -196,11 +200,11 @@ int RenderSystem::Quit() {
   return 0;
 }
 
-static glm::mat4 GetModelFromTransform(Transform transform) {
+static glm::mat4 GetModelFromTransform(std::shared_ptr<Transform> transform) {
   auto model = glm::mat4(1.0f);
-  model = glm::translate(model, glm::vec3(transform.position.x, transform.position.y, transform.layer));
-  model = glm::rotate(model, glm::radians(transform.rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-  model = glm::scale(model, glm::vec3(transform.scale.x, transform.scale.y, 1));
+  model = glm::translate(model, glm::vec3(transform->position.x, transform->position.y, transform->layer));
+  model = glm::rotate(model, glm::radians(transform->rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::scale(model, glm::vec3(transform->scale.x, transform->scale.y, 1));
   return model;
 }
 
@@ -209,7 +213,7 @@ void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
   auto &all_transforms = world->GetComponentSet<Transform>();
   for (auto &[entity_id, camera] : all_cameras) {
     glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, -glm::vec3{camera.position, 3.0});
+    view = glm::translate(view, -glm::vec3{camera->position, 3.0});
     glm::mat4 projection;
     /* if (camera.mode == ProjectionMode::PERSPECTIVE) {
     projection =
@@ -228,7 +232,7 @@ void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
       if (renderable) {
         BindData(renderable->data);
         renderable->shader->Use();
-				renderable->shader->SetUniform("layer", transform.layer);
+				renderable->shader->SetUniform("layer", transform->layer);
         renderable->shader->SetUniform("view", view);
         renderable->shader->SetUniform("projection", projection);
         renderable->shader->SetUniform("model", GetModelFromTransform(transform));
@@ -290,7 +294,7 @@ std::shared_ptr<Framebuffer> RenderSystem::CreateFramebuffer(FramebufferInfo& in
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
   glGenTextures(1, &framebuffer->colorbuffer);
   glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -309,7 +313,7 @@ void RenderSystem::UpdateFramebuffers() {
   for (auto& framebuffer : framebuffers) {
     if (framebuffer->recreate_on_resize) {
       glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
       glBindTexture(GL_TEXTURE_2D, 0);
     }
   }
@@ -317,7 +321,7 @@ void RenderSystem::UpdateFramebuffers() {
 
 void RenderSystem::BindFramebuffer(std::shared_ptr<Framebuffer> framebuffer) {
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
-  glViewport(0, 0, static_cast<int>(window_size.x) / render_scale, static_cast<int>(window_size.y) / render_scale);
+  glViewport(0, 0, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale);
 }
 
 void RenderSystem::UnbindFramebuffer() {

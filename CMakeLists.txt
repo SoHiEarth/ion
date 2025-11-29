@@ -20,7 +20,9 @@ target_sources(ion PRIVATE
   src/render.cc
   src/texture.cc
   src/physics.cc
-  src/world.cc)
+  src/world.cc
+  src/game/player.cc
+)
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 target_include_directories(ion PRIVATE ${CMAKE_SOURCE_DIR}/include)

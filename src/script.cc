@@ -48,6 +48,6 @@ void ScriptSystem::Quit() {
 
 void ScriptSystem::Update(std::shared_ptr<World> world) {
 	for (auto& [entity, script] : world->GetComponentSet<Script>()) {
-		RunScript(script.path, script.module_name, script.parameters);
+		RunScript(script->path, script->module_name, script->parameters);
 	}
 }

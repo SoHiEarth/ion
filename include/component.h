@@ -24,10 +24,10 @@ struct PhysicsBody {
 };
 
 struct Renderable {
-  std::shared_ptr<Texture> color;
-  std::shared_ptr<Texture> normal;
-  std::shared_ptr<Shader> shader;
-  std::shared_ptr<GPUData> data;
+  std::shared_ptr<Texture> color = nullptr;
+  std::shared_ptr<Texture> normal = nullptr;
+  std::shared_ptr<Shader> shader = nullptr;
+  std::shared_ptr<GPUData> data = nullptr;
 };
 
 struct Light {
@@ -43,7 +43,7 @@ struct Camera {
 
 
 struct Script {
-  std::string path;
-  std::string module_name;
-	std::map<std::string, std::string> parameters;
+  std::string path = "";
+  std::string module_name = "main";
+  std::map<std::string, std::string> parameters = {};
 };

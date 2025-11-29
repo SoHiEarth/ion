@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component.h"
+#include "game/player.h"
 #include "render.h"
 #include <map>
 
@@ -10,29 +11,33 @@ const EntityID NULL_ENTITY = std::numeric_limits<EntityID>::max();
 struct World {
 private:
   EntityID next_id = 1;
-  std::map<EntityID, Transform> transforms;
-  std::map<EntityID, Renderable> renderables;
-  std::map<EntityID, PhysicsBody> physics_bodies;
-  std::map<EntityID, Camera> cameras;
-  std::map<EntityID, Light> lights;
-	std::map<EntityID, Script> scripts;
+  std::map<EntityID, std::shared_ptr<Transform>> transforms;
+  std::map<EntityID, std::shared_ptr<Renderable>> renderables;
+  std::map<EntityID, std::shared_ptr<PhysicsBody>> physics_bodies;
+  std::map<EntityID, std::shared_ptr<Camera>> cameras;
+  std::map<EntityID, std::shared_ptr<Light>> lights;
+	std::map<EntityID, std::shared_ptr<Script>> scripts;
+	std::map<EntityID, std::shared_ptr<Player>> players;
+	std::map<EntityID, std::shared_ptr<void>> custom_components;
 
 public:
+	// Creates a new entity and returns its ID
+	// Note: Adds a transform component after creating an entity
   EntityID CreateEntity();
   void DestroyEntity(EntityID entity);
   EntityID GetNextEntityID() const { return next_id; }
 
-  template <typename T> std::map<EntityID, T> &GetComponentSet();
+  template <typename T> std::map<EntityID, std::shared_ptr<T>> &GetComponentSet();
 
-  template <typename T> T *AddComponent(EntityID entity, const T &component) {
-    GetComponentSet<T>().insert({entity, component});
-    return &GetComponentSet<T>().at(entity);
-  }
+  template <typename T> std::shared_ptr<T> NewComponent(EntityID entity) {
+    GetComponentSet<T>().insert({entity, std::make_shared<T>()});
+    return GetComponentSet<T>().at(entity);
+	}
 
-  template <typename T> T *GetComponent(EntityID entity) {
+  template <typename T> std::shared_ptr<T> GetComponent(EntityID entity) {
     auto it = GetComponentSet<T>().find(entity);
     if (it != GetComponentSet<T>().end()) {
-      return &it->second;
+      return it->second;
     }
     return nullptr;
   }
