@@ -31,6 +31,14 @@ static void SizeCallback(GLFWwindow *window, int w, int h) {
   Context::Get().render_sys.UpdateFramebuffers();
 }
 
+static glm::mat4 GetModelFromTransform(std::shared_ptr<Transform> transform) {
+  auto model = glm::mat4(1.0f);
+  model = glm::translate(model, glm::vec3(transform->position.x, transform->position.y, transform->layer));
+  model = glm::rotate(model, glm::radians(transform->rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::scale(model, glm::vec3(transform->scale.x, transform->scale.y, 1));
+  return model;
+}
+
 int RenderSystem::Init() {
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -55,6 +63,7 @@ int RenderSystem::Init() {
     return -1;
   }
   glEnable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
   glfwSetFramebufferSizeCallback(window, SizeCallback);
   return 0;
 }
@@ -140,7 +149,7 @@ void RenderSystem::Clear(glm::vec4 color) {
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<Framebuffer> normal_fb, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world) {
+int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<Framebuffer> normal_fb, std::shared_ptr<GPUData> quad, std::shared_ptr<Shader> shader, std::shared_ptr<World> world) {
   shader->Use();
   glClear(GL_COLOR_BUFFER_BIT);
   glActiveTexture(GL_TEXTURE0);
@@ -156,41 +165,50 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
   glm::mat4 projection = glm::mat4(1.0f);
   if (!all_cameras.empty()) {
     auto& camera = all_cameras.begin()->second;
+    auto& camera_entity_id = all_cameras.begin()->first;
+    
+    view = GetModelFromTransform(world->GetComponent<Transform>(camera_entity_id));
     view = glm::translate(view, -glm::vec3{camera->position, 3.0});
-    projection = glm::perspective(glm::radians(45.0f), GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
+    float ortho_scale = 10.0f;
+    projection = glm::ortho(-ortho_scale * (GetWindowSize().x / GetWindowSize().y),
+                            ortho_scale * (GetWindowSize().x / GetWindowSize().y),
+                            -ortho_scale, ortho_scale, 0.1f, 100.0f);
   }
   
   for (int i = 0; i < world->GetComponentSet<Light>().size(); i++) {
     auto& [entity_id, light] = *std::next(world->GetComponentSet<Light>().begin(), i);
-    auto light_world_pos = glm::vec4(world->GetComponent<Transform>(entity_id)->position, 0.0f, 1.0f);
-    auto light_clip_pos = projection * view * light_world_pos;
-    auto light_ndc_pos = glm::vec2(light_clip_pos) / light_clip_pos.w;
-    
-    shader->SetUniform("lights[" + std::to_string(i) + "].position", light_ndc_pos);
+    auto transform = world->GetComponent<Transform>(entity_id);
+    glm::vec3 light_world_pos = glm::vec3(transform->position, transform->layer);
+    glm::vec4 light_clip_pos = projection * view * glm::vec4(light_world_pos, 1.0f);
+    glm::vec2 light_texcoord = ((glm::vec2(light_clip_pos) / light_clip_pos.w) + 1.0f) * 0.5f;
+    // TODO: Pack data into vec4s, reduce calls by half.
+    shader->SetUniform("lights[" + std::to_string(i) + "].position", light_texcoord);
     shader->SetUniform("lights[" + std::to_string(i) + "].color", light->color);
     shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light->intensity);
     shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light->radial_falloff);
   }  
-  BindData(data);
+  BindData(quad);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   UnbindData();
   return 0;
 }
 
-void RenderSystem::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> data) {
+void RenderSystem::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, static_cast<int>(r_config.window_size.x), static_cast<int>(r_config.window_size.y));
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glDisable(GL_DEPTH_TEST);
   shader->Use();
-  BindData(data);
+  BindData(quad);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
   shader->SetUniform("screen_texture", 0);
-  if (data->element_enabled) {
+  if (quad->element_enabled) {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   } else {
     glDrawArrays(GL_TRIANGLES, 0, 6);
   }
+  glEnable(GL_DEPTH_TEST);
   UnbindData();
 }
 
@@ -200,33 +218,18 @@ int RenderSystem::Quit() {
   return 0;
 }
 
-static glm::mat4 GetModelFromTransform(std::shared_ptr<Transform> transform) {
-  auto model = glm::mat4(1.0f);
-  model = glm::translate(model, glm::vec3(transform->position.x, transform->position.y, transform->layer));
-  model = glm::rotate(model, glm::radians(transform->rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-  model = glm::scale(model, glm::vec3(transform->scale.x, transform->scale.y, 1));
-  return model;
-}
-
 void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
   auto &all_cameras = world->GetComponentSet<Camera>();
   auto &all_transforms = world->GetComponentSet<Transform>();
   for (auto &[entity_id, camera] : all_cameras) {
-    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 view = GetModelFromTransform(world->GetComponent<Transform>(entity_id));
     view = glm::translate(view, -glm::vec3{camera->position, 3.0});
-    glm::mat4 projection;
-    /* if (camera.mode == ProjectionMode::PERSPECTIVE) {
-    projection =
-        glm::perspective(glm::radians(45.0f),
-                         GetWindowSize().x / GetWindowSize().y, 0.1f, 100.0f);
-    } else {*/
     float ortho_scale = 10.0f;
-    projection = glm::ortho(-ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
+    auto projection = glm::ortho(-ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
       Context::Get().render_sys.GetWindowSize().y),
                             ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
                               Context::Get().render_sys.GetWindowSize().y),
                             -ortho_scale, ortho_scale, 0.1f, 100.0f);
-    //}
     for (auto &[entity_id, transform] : all_transforms) {
       auto renderable = world->GetComponent<Renderable>(entity_id);
       if (renderable) {
@@ -294,7 +297,7 @@ std::shared_ptr<Framebuffer> RenderSystem::CreateFramebuffer(FramebufferInfo& in
   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->framebuffer);
   glGenTextures(1, &framebuffer->colorbuffer);
   glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -305,15 +308,15 @@ std::shared_ptr<Framebuffer> RenderSystem::CreateFramebuffer(FramebufferInfo& in
     printf("Failed to create framebuffer\n");
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  framebuffers.push_back(framebuffer);
+  framebuffers.insert({ framebuffer, info.name });
   return framebuffer;
 }
 
 void RenderSystem::UpdateFramebuffers() {
-  for (auto& framebuffer : framebuffers) {
+  for (auto& [framebuffer, name] : framebuffers) {
     if (framebuffer->recreate_on_resize) {
       glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, static_cast<int>(r_config.window_size.x) / r_config.render_scale, static_cast<int>(r_config.window_size.y) / r_config.render_scale, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
       glBindTexture(GL_TEXTURE_2D, 0);
     }
   }
@@ -330,4 +333,32 @@ void RenderSystem::UnbindFramebuffer() {
 
 void RenderSystem::Present() {
   glfwSwapBuffers(window);
+}
+
+void RenderSystem::BindTexture(std::shared_ptr<Texture> texture, int slot) {
+  glActiveTexture(GL_TEXTURE0 + slot);
+  glBindTexture(GL_TEXTURE_2D, texture->texture);
+}
+
+void RenderSystem::BindTexture(std::shared_ptr<Framebuffer> framebuffer, int slot) {
+  glActiveTexture(GL_TEXTURE0 + slot);
+  glBindTexture(GL_TEXTURE_2D, framebuffer->colorbuffer);
+}
+
+void RenderSystem::RunPass(std::shared_ptr<Framebuffer> in, std::shared_ptr<Framebuffer> out, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad) {
+  BindFramebuffer(out);
+  shader->SetUniform("ION_PASS_IN", 0);
+  BindTexture(in, 0);
+  BindData(quad);
+  if (quad->element_enabled) {
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  }
+  else {
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+  }
+  UnbindData();
+}
+
+void RenderSystem::UseShader(std::shared_ptr<Shader> shader) {
+  glUseProgram(shader->GetProgram());
 }

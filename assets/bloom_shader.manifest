@@ -1,0 +1,3 @@
+relative:true
+vertex_path:/bloom_shader.vert
+fragment_path:/bloom_shader.frag

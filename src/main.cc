@@ -12,21 +12,22 @@
 #include <imgui_stdlib.h>
 #include <vector>
 #include <format>
+#include "shader.h"
 
 std::vector<float> vertices = {
-   0.5f,  0.5f, 0.0f, 1.0f, 0.0f,
-   0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-  -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-  -0.5f,  0.5f, 0.0f, 0.0f, 0.0f
+   0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+   0.5f, -0.5f,  0.0f,  1.0f,  1.0f,
+  -0.5f, -0.5f,  0.0f,  0.0f,  1.0f,
+  -0.5f,  0.5f,  0.0f,  0.0f,  0.0f
 },
 screen_vertices = {
-    1.0f,  1.0f,  1.0f, 1.0f,
-    1.0f, -1.0f,  1.0f, 0.0f,
-   -1.0f, -1.0f,  0.0f, 0.0f,
-   -1.0f,  1.0f,  0.0f, 1.0f
+   1.0f,  1.0f,  1.0f,  1.0f,
+   1.0f, -1.0f,  1.0f,  0.0f,
+  -1.0f, -1.0f,  0.0f,  0.0f,
+  -1.0f,  1.0f,  0.0f,  1.0f
 };
-;
-std::vector<unsigned int> indices = {0, 1, 3, 1, 2, 3};
+
+std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 
 int main(int argc, char **argv) {
   auto world = Context::Get().asset_sys.LoadAsset<World>("world.manifest", Context::Get());
@@ -81,17 +82,30 @@ int main(int argc, char **argv) {
   auto framebuffer_info = FramebufferInfo{
       .recreate_on_resize = true
   };
+
+  framebuffer_info.name = "Color";
   auto color_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  framebuffer_info.name = "Normal";
   auto normal_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  framebuffer_info.name = "Shaded";
   auto framebuffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
-  auto shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/texture_shader.manifest", Context::Get());
+  framebuffer_info.name = "Bloom";
+  auto bloom_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto& final_pass = framebuffer;
+
   auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
     "assets/deferred_shader.manifest", Context::Get());
   auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
     "assets/screen_shader.manifest", Context::Get());
-  auto texture = Context::Get().asset_sys.LoadAsset<Texture>(
-    "assets/test_texture.manifest", Context::Get());
+  auto bloom_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+		"assets/bloom_shader.manifest", Context::Get());
+  auto bloom_blur_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/bloom_blur_shader.manifest", Context::Get());
+  auto bloom_combine_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+    "assets/bloom_combine_shader.manifest", Context::Get());
+  auto tonemap_shader = Context::Get().asset_sys.LoadAsset<Shader>(
+		"assets/tonemap_shader.manifest", Context::Get());
+
   auto default_texture = Context::Get().asset_sys.LoadAsset<Texture>(
     "assets/default_texture.manifest", Context::Get());
   auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
@@ -101,9 +115,9 @@ int main(int argc, char **argv) {
   world->NewComponent<Camera>(camera_entity);
   auto entity = world->CreateEntity();
   auto renderable = world->NewComponent<Renderable>(entity);
-	renderable->color = texture;
-  renderable->normal = texture;
-	renderable->shader = shader;
+	renderable->color = default_texture;
+  renderable->normal = default_texture;
+	renderable->shader = default_shader;
 	renderable->data = data;
 
   auto light_entity = world->CreateEntity();
@@ -123,14 +137,20 @@ int main(int argc, char **argv) {
 
     {
       ImGui::Begin("Framebuffers");
-      ImGui::Image(color_buffer->colorbuffer,
-                   ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
-      ImGui::SameLine();
-      ImGui::Image(normal_buffer->colorbuffer,
-                    ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
-      ImGui::SameLine();
-      ImGui::Image(framebuffer->colorbuffer,
-                   ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
+
+      for (auto& [buffer, name] : Context::Get().render_sys.GetFramebuffers()) {
+        ImGui::PushID(buffer->framebuffer);
+        ImGui::Image(buffer->colorbuffer,
+          ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::SameLine();
+        ImGui::TextUnformatted(name.c_str());
+        ImGui::SameLine();
+        if (ImGui::Button("Set as final pass")) {
+          final_pass = buffer;
+        }
+        ImGui::PopID();
+      }
+
       ImGui::End();
     }
 
@@ -283,21 +303,39 @@ int main(int argc, char **argv) {
     Context::Get().render_sys.BindFramebuffer(normal_buffer);
     Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
     Context::Get().render_sys.DrawWorld(world, RENDER_PASS_NORMAL);
+
     Context::Get().render_sys.BindFramebuffer(framebuffer);
     Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
     Context::Get().render_sys.Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
-    Context::Get().render_sys.UnbindFramebuffer();
-    Context::Get().render_sys.Clear({0.1f, 0.1f, 0.1f, 1.0f});
-    Context::Get().render_sys.DrawFramebuffer(framebuffer, screen_shader, screen_data);
+
+    // Bloom
+		Context::Get().render_sys.BindFramebuffer(bloom_buffer);
+		Context::Get().render_sys.Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
+    
+    Context::Get().render_sys.UseShader(bloom_shader);
+		Context::Get().render_sys.RunPass(framebuffer, bloom_buffer, bloom_shader, screen_data);
+    //Context::Get().render_sys.UseShader(bloom_blur_shader);
+    //Context::Get().render_sys.RunPass(bloom_buffer, bloom_buffer, bloom_blur_shader, screen_data);
+    Context::Get().render_sys.UseShader(bloom_combine_shader);
+    Context::Get().render_sys.BindTexture(framebuffer, 1);
+    bloom_combine_shader->SetUniform("ION_PASS_FRAMEBUFFER", 1);
+    Context::Get().render_sys.RunPass(bloom_buffer, framebuffer, bloom_combine_shader, screen_data);
+
+    Context::Get().render_sys.UseShader(tonemap_shader);
+    Context::Get().render_sys.RunPass(framebuffer, framebuffer, tonemap_shader, screen_data);
+    Context::Get().render_sys.DrawFramebuffer(final_pass, screen_shader, screen_data);
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     Context::Get().render_sys.Present();
   }
   Context::Get().physics_sys.Quit();
+	Context::Get().render_sys.DestroyData(screen_data);
   Context::Get().render_sys.DestroyData(data);
-  Context::Get().render_sys.DestroyShader(shader);
+  Context::Get().render_sys.DestroyShader(screen_shader);
+  Context::Get().render_sys.DestroyShader(deferred_shader);
+  Context::Get().render_sys.DestroyShader(default_shader);
 	Context::Get().script_sys.Quit();
-  Context::Get().physics_sys.Quit();
   Context::Get().render_sys.Quit();
   return 0;
 }

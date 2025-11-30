@@ -28,11 +28,14 @@ void main() {
   
   vec3 total_lighting = vec3(0.0);
   for (int i = 0; i < light_count && i < MAX_LIGHTS; i++) {
-    vec3 light_dir = normalize(vec3(lights[i].position - TexCoord, 1.0));
-    float distance = length(vec2(lights[i].position - TexCoord));
-    float attenuation = max(lights[i].intensity / (1.0 + lights[i].radial_falloff * distance * distance), 0.0);
+    vec2 light_offset = lights[i].position - TexCoord;
+    vec3 light_dir = normalize(vec3(light_offset, 0.0));
+    float distance = length(light_offset);
+    float attenuation = lights[i].intensity / (1.0 + lights[i].radial_falloff * distance * distance);
+    attenuation = max(attenuation, 0.0);
     float diff = max(dot(normal, light_dir), 0.0);
     total_lighting += albedo * lights[i].color * diff * attenuation;
   }
+  
   FragColor = vec4(total_lighting, 1.0);
 }

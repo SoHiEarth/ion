@@ -114,6 +114,7 @@ std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest, 
 	auto world = std::make_shared<World>();
   return world;
 }
+
 void AssetSystem::Inspector() {
   ImGui::Begin("Asset System");
   if (ImGui::Button("Load Image from Manifest")) {
@@ -122,6 +123,7 @@ void AssetSystem::Inspector() {
     if (file_char) {
       LoadAsset<Texture>(file_char, Context::Get());
     }
+		free(file_char);
   }
   if (ImGui::Button("Load Texture Pack from Manifest")) {
     auto file_char = tinyfd_openFileDialog(
@@ -129,6 +131,7 @@ void AssetSystem::Inspector() {
     if (file_char) {
       LoadAsset<TexturePack>(file_char, Context::Get());
     }
+		free(file_char);
   }
   for (int i = 0; i < textures.size(); i++) {
     ImGui::PushID(i);

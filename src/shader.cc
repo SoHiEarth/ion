@@ -78,6 +78,7 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertex, info_log.size(), nullptr, info_log.data());
+    printf("Error while compiling vertex shader %s\n", vertex_path.data());
     printf("%s\n", info_log.data());
     printf("%d\n", VERTEX_COMPILATION_FAIL);
   }
@@ -86,6 +87,7 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragment, 512, nullptr, info_log.data());
+		printf("Error while compiling fragment shader %s\n", fragment_path.data());
     printf("%s\n", info_log.data());
     printf("%d\n", FRAGMENT_COMPILATION_FAIL);
   }

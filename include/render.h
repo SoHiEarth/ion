@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <string>
+#include <map>
 
 struct Transform;
 struct Texture;
@@ -35,6 +37,7 @@ struct TextureInfo {
 struct FramebufferInfo {
   bool enable_colorbuffer = true;
   bool recreate_on_resize = false;
+  std::string name = "NO_LABEL";
 };
 
 struct Framebuffer {
@@ -51,7 +54,7 @@ enum RenderPass {
 class RenderSystem {
 private:
   GLFWwindow *window;
-  std::vector<std::shared_ptr<Framebuffer>> framebuffers;
+  std::map<std::shared_ptr<Framebuffer>, std::string> framebuffers;
 
 public:
   int Init();
@@ -69,6 +72,13 @@ public:
   void BindFramebuffer(std::shared_ptr<Framebuffer>);
   void UnbindFramebuffer();
   void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>, std::shared_ptr<GPUData> quad);
+	const std::map<std::shared_ptr<Framebuffer>, std::string>& GetFramebuffers() const { return framebuffers; }
+
+	void BindTexture(std::shared_ptr<Texture> texture, int slot);
+  void BindTexture(std::shared_ptr<Framebuffer> framebuffer, int slot);
+
+  void UseShader(std::shared_ptr<Shader> shader);
+	void RunPass(std::shared_ptr<Framebuffer> in_framebuffer, std::shared_ptr<Framebuffer> out_framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
 
   void DrawWorld(std::shared_ptr<World>, RenderPass);
   void DestroyShader(std::shared_ptr<Shader>);
