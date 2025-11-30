@@ -78,12 +78,12 @@ public:
   void BindTexture(std::shared_ptr<Framebuffer> framebuffer, int slot);
 
   void UseShader(std::shared_ptr<Shader> shader);
-	void RunPass(std::shared_ptr<Framebuffer> in_framebuffer, std::shared_ptr<Framebuffer> out_framebuffer, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
+	void RunPass(std::shared_ptr<Framebuffer> in, std::shared_ptr<Framebuffer> out, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
 
   void DrawWorld(std::shared_ptr<World>, RenderPass);
   void DestroyShader(std::shared_ptr<Shader>);
   void Clear(glm::vec4);
-  int Render(std::shared_ptr<Framebuffer> color_framebuffer, std::shared_ptr<Framebuffer> normal_framebuffer, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world);
+  int Render(std::shared_ptr<Framebuffer> color, std::shared_ptr<Framebuffer> normal, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world);
   void Present();
   int Quit();
 };
