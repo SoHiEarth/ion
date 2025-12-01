@@ -6,41 +6,43 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
+#include "exports.h"
 
 struct Transform;
 struct Texture;
 struct Shader;
 struct World;
 enum class DataType : std::uint8_t { INT, UNSIGNED_INT, FLOAT };
-struct AttributePointer {
+struct ION_API AttributePointer {
   int size = 2;
   DataType type = DataType::FLOAT;
   bool normalized = false;
   size_t stride = 0;
-  const void *pointer;
+  const void *pointer = 0;
 };
 
-struct DataDescriptor {
+struct ION_API DataDescriptor {
   std::vector<AttributePointer> pointers;
   bool element_enabled = false;
   std::vector<float> vertices;
   std::vector<unsigned int> indices;
 };
 
-struct TextureInfo {
+struct ION_API TextureInfo {
   unsigned char *data;
   int width;
   int height;
   int nr_channels;
 };
 
-struct FramebufferInfo {
+struct ION_API FramebufferInfo {
   bool enable_colorbuffer = true;
   bool recreate_on_resize = false;
   std::string name = "NO_LABEL";
 };
 
-struct Framebuffer {
+struct ION_API Framebuffer {
   bool recreate_on_resize = false;
   unsigned int framebuffer = 0;
   unsigned int colorbuffer = 0;
@@ -51,7 +53,7 @@ enum RenderPass {
   RENDER_PASS_NORMAL
 };
 
-class RenderSystem {
+class ION_API RenderSystem {
 private:
   GLFWwindow *window;
   std::map<std::shared_ptr<Framebuffer>, std::string> framebuffers;

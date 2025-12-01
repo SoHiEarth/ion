@@ -28,7 +28,7 @@ static RenderSystemConfig r_config;
 static void SizeCallback(GLFWwindow *window, int w, int h) {
   r_config.window_size.x = w;
   r_config.window_size.y = h;
-  Context::Get().render_sys.UpdateFramebuffers();
+  ion::GetSystem<RenderSystem>().UpdateFramebuffers();
 }
 
 static glm::mat4 GetModelFromTransform(std::shared_ptr<Transform> transform) {
@@ -54,10 +54,6 @@ int RenderSystem::Init() {
     return -1;
   }
   glfwMakeContextCurrent(window);
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init("#version 150");
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     printf("%d\n", OPENGL_LOADER_FAIL);
     return -1;
@@ -225,10 +221,10 @@ void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
     glm::mat4 view = GetModelFromTransform(world->GetComponent<Transform>(entity_id));
     view = glm::translate(view, -glm::vec3{camera->position, 3.0});
     float ortho_scale = 10.0f;
-    auto projection = glm::ortho(-ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
-      Context::Get().render_sys.GetWindowSize().y),
-                            ortho_scale * (Context::Get().render_sys.GetWindowSize().x /
-                              Context::Get().render_sys.GetWindowSize().y),
+    auto projection = glm::ortho(-ortho_scale * (ion::GetSystem<RenderSystem>().GetWindowSize().x /
+      ion::GetSystem<RenderSystem>().GetWindowSize().y),
+                            ortho_scale * (ion::GetSystem<RenderSystem>().GetWindowSize().x /
+                              ion::GetSystem<RenderSystem>().GetWindowSize().y),
                             -ortho_scale, ortho_scale, 0.1f, 100.0f);
     for (auto &[entity_id, transform] : all_transforms) {
       auto renderable = world->GetComponent<Renderable>(entity_id);

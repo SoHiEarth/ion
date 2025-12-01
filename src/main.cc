@@ -7,12 +7,11 @@
 #include "script.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 #include <imgui_stdlib.h>
 #include <vector>
 #include <format>
 #include "shader.h"
+#include "development/gui.h"
 
 std::vector<float> vertices = {
    0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
@@ -31,10 +30,11 @@ std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
 
 int main(int argc, char **argv) {
-  auto world = Context::Get().asset_sys.LoadAsset<World>("world.manifest", Context::Get());
-  Context::Get().render_sys.Init();
-  Context::Get().physics_sys.Init();
-	Context::Get().script_sys.Init();
+  auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>("world.manifest");
+  ion::GetSystem<RenderSystem>().Init();
+  ion::gui::Init(ion::GetSystem<RenderSystem>().GetWindow());
+  ion::GetSystem<PhysicsSystem>().Init();
+  ion::GetSystem<ScriptSystem>().Init();
 
   AttributePointer position_pointer {
     .size = 3,
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     .vertices = vertices,
     .indices = indices
   };
-  auto data = Context::Get().render_sys.CreateData(data_desc);
+  auto data = ion::GetSystem<RenderSystem>().CreateData(data_desc);
 
   AttributePointer screen_position_pointer {
     .size = 2,
@@ -78,43 +78,35 @@ int main(int argc, char **argv) {
     .vertices = screen_vertices,
     .indices = indices
   };
-  auto screen_data = Context::Get().render_sys.CreateData(screen_data_desc);
+  auto screen_data = ion::GetSystem<RenderSystem>().CreateData(screen_data_desc);
 
   auto framebuffer_info = FramebufferInfo{
       .recreate_on_resize = true
   };
 
   framebuffer_info.name = "Color";
-  auto color_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto color_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   framebuffer_info.name = "Normal";
-  auto normal_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto normal_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   framebuffer_info.name = "Shaded";
-  auto shaded = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto shaded = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   framebuffer_info.name = "Bloom";
-  auto bloom_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto bloom_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   framebuffer_info.name = "Bloom 2";
-  auto bloom_buffer2 = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+  auto bloom_buffer2 = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
 	framebuffer_info.name = "Tonemapped";
-	auto tonemap_buffer = Context::Get().render_sys.CreateFramebuffer(framebuffer_info);
+	auto tonemap_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   auto& final_framebuffer = shaded;
 
-  auto deferred_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/deferred_shader.manifest", Context::Get());
-  auto screen_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/screen_shader.manifest", Context::Get());
-  auto bloom_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-		"assets/bloom_shader.manifest", Context::Get());
-  auto bloom_blur_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/bloom_blur_shader.manifest", Context::Get());
-  auto combine_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/bloom_combine_shader.manifest", Context::Get());
-  auto tonemap_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-		"assets/tonemap_shader.manifest", Context::Get());
+  auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader.manifest");
+  auto screen_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/screen_shader.manifest");
+  auto bloom_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_shader.manifest");
+  auto bloom_blur_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_blur_shader.manifest");
+  auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader.manifest");
+  auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader.manifest");
 
-  auto default_texture = Context::Get().asset_sys.LoadAsset<Texture>(
-    "assets/default_texture.manifest", Context::Get());
-  auto default_shader = Context::Get().asset_sys.LoadAsset<Shader>(
-    "assets/texture_shader.manifest", Context::Get());
+  auto default_texture = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/default_texture.manifest");
+  auto default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader.manifest");
 
   auto camera_entity = world->CreateEntity();
   world->NewComponent<Camera>(camera_entity);
@@ -131,19 +123,18 @@ int main(int argc, char **argv) {
 	light->radial_falloff = 1.0f;
 	light->color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-  while (!glfwWindowShouldClose(Context::Get().render_sys.GetWindow())) {
+  while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {
     glfwPollEvents();
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    Context::Get().script_sys.Update(world);
-    Context::Get().physics_sys.Update();
-    Context::Get().asset_sys.Inspector();
+		ion::gui::NewFrame();
+    ion::GetSystem<ScriptSystem>().Update(world);
+    ion::GetSystem<PhysicsSystem>().Update();
+    ion::GetSystem<AssetSystem>().Inspector();
 
+    ION_GUI_PREP_CONTEXT();
     {
       ImGui::Begin("Framebuffers");
 			ImGui::Checkbox("Enable Bloom", &bloom_enable);
-      for (auto& [buffer, name] : Context::Get().render_sys.GetFramebuffers()) {
+      for (auto& [buffer, name] : ion::GetSystem<RenderSystem>().GetFramebuffers()) {
         ImGui::PushID(buffer->framebuffer);
         ImGui::Image(buffer->colorbuffer,
           ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
@@ -302,61 +293,60 @@ int main(int argc, char **argv) {
       ImGui::End();
     }
     
-    Context::Get().render_sys.BindFramebuffer(color_buffer);
-    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
-    Context::Get().render_sys.DrawWorld(world, RENDER_PASS_COLOR);
-    Context::Get().render_sys.BindFramebuffer(normal_buffer);
-    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
-    Context::Get().render_sys.DrawWorld(world, RENDER_PASS_NORMAL);
+    ion::GetSystem<RenderSystem>().BindFramebuffer(color_buffer);
+    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_COLOR);
+    ion::GetSystem<RenderSystem>().BindFramebuffer(normal_buffer);
+    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_NORMAL);
 
-    Context::Get().render_sys.BindFramebuffer(shaded);
-    Context::Get().render_sys.Clear({0.0f, 0.0f, 0.0f, 1.0f});
-    Context::Get().render_sys.Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
-		Context::Get().render_sys.UnbindFramebuffer();
+    ion::GetSystem<RenderSystem>().BindFramebuffer(shaded);
+    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
+    ion::GetSystem<RenderSystem>().UnbindFramebuffer();
 
     // Bloom
     if (bloom_enable) {
-      Context::Get().render_sys.BindFramebuffer(bloom_buffer);
-      Context::Get().render_sys.Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
-      Context::Get().render_sys.UseShader(bloom_shader);
-      Context::Get().render_sys.RunPass(shaded, bloom_buffer, bloom_shader, screen_data);
+      ion::GetSystem<RenderSystem>().BindFramebuffer(bloom_buffer);
+      ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
+      ion::GetSystem<RenderSystem>().UseShader(bloom_shader);
+      ion::GetSystem<RenderSystem>().RunPass(shaded, bloom_buffer, bloom_shader, screen_data);
 
-      Context::Get().render_sys.UseShader(bloom_blur_shader);
+      ion::GetSystem<RenderSystem>().UseShader(bloom_blur_shader);
       bool horizontal = true;
       int blur_amount = 10;
 
       for (int i = 0; i < blur_amount; i++) {
         auto& source = horizontal ? bloom_buffer : bloom_buffer2;
         auto& target = horizontal ? bloom_buffer2 : bloom_buffer;
-        Context::Get().render_sys.BindFramebuffer(target);
-        Context::Get().render_sys.Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
+        ion::GetSystem<RenderSystem>().BindFramebuffer(target);
+        ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
         bloom_blur_shader->SetUniform("horizontal", (int)horizontal);
-        Context::Get().render_sys.RunPass(source, target, bloom_blur_shader, screen_data);
+        ion::GetSystem<RenderSystem>().RunPass(source, target, bloom_blur_shader, screen_data);
         horizontal = !horizontal;
       }
 
-      Context::Get().render_sys.UseShader(combine_shader);
-      Context::Get().render_sys.BindTexture(shaded, 1);
+      ion::GetSystem<RenderSystem>().UseShader(combine_shader);
+      ion::GetSystem<RenderSystem>().BindTexture(shaded, 1);
       combine_shader->SetUniform("ION_PASS_FRAMEBUFFER", 1);
-      Context::Get().render_sys.RunPass(bloom_buffer, shaded, combine_shader, screen_data);
+      ion::GetSystem<RenderSystem>().RunPass(bloom_buffer, shaded, combine_shader, screen_data);
     }
 
     //Context::Get().render_sys.UseShader(tonemap_shader);
     //Context::Get().render_sys.RunPass(tonemap_buffer, shaded, tonemap_shader, screen_data);
 
-    Context::Get().render_sys.DrawFramebuffer(final_framebuffer, screen_shader, screen_data);
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    Context::Get().render_sys.Present();
+    ion::GetSystem<RenderSystem>().DrawFramebuffer(final_framebuffer, screen_shader, screen_data);
+    ion::gui::Render();
+    ion::GetSystem<RenderSystem>().Present();
   }
-  Context::Get().physics_sys.Quit();
-	Context::Get().render_sys.DestroyData(screen_data);
-  Context::Get().render_sys.DestroyData(data);
-  Context::Get().render_sys.DestroyShader(screen_shader);
-  Context::Get().render_sys.DestroyShader(deferred_shader);
-  Context::Get().render_sys.DestroyShader(default_shader);
-	Context::Get().script_sys.Quit();
-  Context::Get().render_sys.Quit();
+  ion::GetSystem<PhysicsSystem>().Quit();
+  ion::GetSystem<RenderSystem>().DestroyData(screen_data);
+  ion::GetSystem<RenderSystem>().DestroyData(data);
+  ion::GetSystem<RenderSystem>().DestroyShader(screen_shader);
+  ion::GetSystem<RenderSystem>().DestroyShader(deferred_shader);
+  ion::GetSystem<RenderSystem>().DestroyShader(default_shader);
+  ion::GetSystem<ScriptSystem>().Quit();
+  ion::GetSystem<RenderSystem>().Quit();
+  ion::gui::Quit();
   return 0;
 }

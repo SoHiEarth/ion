@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <imgui.h>
+#include "development/gui.h"
 #include <map>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -44,7 +45,7 @@ static std::map<std::string, std::string> ParseManifest(std::string_view path) {
 
 template <>
 std::shared_ptr<Texture>
-AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context &context) {
+AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
   printf("Loading texture from manifest: %s\n", manifest.data());
   TextureInfo info{};
   auto manifest_info = ParseManifest(manifest);
@@ -69,7 +70,7 @@ AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context &context) {
   }
 
   auto texture = std::make_shared<Texture>();
-  texture->texture = context.render_sys.ConfigureTexture(info);
+  texture->texture = ion::GetSystem<RenderSystem>().ConfigureTexture(info);
   stbi_image_free(info.data);
   textures.push_back(texture);
   return texture;
@@ -77,21 +78,21 @@ AssetSystem::LoadAsset<Texture>(std::string_view manifest, Context &context) {
 
 template <>
 std::shared_ptr<TexturePack>
-AssetSystem::LoadAsset<TexturePack>(std::string_view manifest, Context &context) {
+AssetSystem::LoadAsset<TexturePack>(std::string_view manifest) {
   TexturePack pack{};
   auto manifest_info = ParseManifest(manifest);
   std::string directory;
   if (manifest_info["relative"] == "true") {
     directory = std::filesystem::path(manifest).parent_path().generic_string();
   }
-  pack.color = LoadAsset<Texture>(directory + manifest_info["color"], context);
-  pack.normal = LoadAsset<Texture>(directory + manifest_info["normal"], context);
+  pack.color = LoadAsset<Texture>(directory + manifest_info["color"]);
+  pack.normal = LoadAsset<Texture>(directory + manifest_info["normal"]);
   return std::make_shared<TexturePack>(pack);
 }
 
 template <>
 std::shared_ptr<Shader>
-AssetSystem::LoadAsset<Shader>(std::string_view manifest, Context &context) {
+AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
   auto manifest_info = ParseManifest(manifest);
   if (manifest_info["relative"] == "true") {
     auto directory =
@@ -110,18 +111,19 @@ AssetSystem::LoadAsset<Shader>(std::string_view manifest, Context &context) {
 }
 
 template <>
-std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest, Context& context) {
+std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest) {
 	auto world = std::make_shared<World>();
   return world;
 }
 
 void AssetSystem::Inspector() {
+  ION_GUI_PREP_CONTEXT();
   ImGui::Begin("Asset System");
   if (ImGui::Button("Load Image from Manifest")) {
     auto file_char = tinyfd_openFileDialog("Load Image From Manifest", nullptr,
                                            0, nullptr, nullptr, false);
     if (file_char) {
-      LoadAsset<Texture>(file_char, Context::Get());
+      LoadAsset<Texture>(file_char);
     }
 		free(file_char);
   }
@@ -129,7 +131,7 @@ void AssetSystem::Inspector() {
     auto file_char = tinyfd_openFileDialog(
         "Load Texture Pack From Manifest", nullptr, 0, nullptr, nullptr, false);
     if (file_char) {
-      LoadAsset<TexturePack>(file_char, Context::Get());
+      LoadAsset<TexturePack>(file_char);
     }
 		free(file_char);
   }
