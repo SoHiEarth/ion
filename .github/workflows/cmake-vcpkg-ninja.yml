@@ -83,5 +83,4 @@ jobs:
         prerelease: true
         title: "Pre-release build"
         files: |
-          builds/ninja-multi-vcpkg/Release/ion.exe
-          builds/ninja-multi-vcpkg/Release/*.dll
+          builds/ninja-multi-vcpkg/Release/ion-latest.zip
