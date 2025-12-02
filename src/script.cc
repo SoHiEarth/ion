@@ -1,8 +1,22 @@
 #include "script.h"
+#include <filesystem>
+
+bool CheckPythonExists() {
+	// If the "Lib" directory doesn't exist, Python is not properly set up
+	// To fix this, set the PYTHONHOME environment variable to point to your Python installation,
+	// or copy the "Lib" directory from your Python installation to the directory the working directory.
+	if (!std::filesystem::exists("Lib")) {
+		return false;
+	}
+	return true;
+}
 
 void ScriptSystem::RunScript(std::string_view script,
 	std::string_view func,
 	std::map<std::string, std::string> parameters) {
+	if (!python_initialized) {
+		return;
+	}
 	auto pName = PyUnicode_DecodeFSDefault(script.data());
 	auto pModule = PyImport_Import(pName);
 	Py_DECREF(pName);
@@ -39,10 +53,18 @@ void ScriptSystem::RunScript(std::string_view script,
 
 
 void ScriptSystem::Init() {
+	python_initialized = CheckPythonExists();
+	if (!python_initialized) {
+		printf("Python library not found, skipping initialization.\n");
+		return;
+	}
 	Py_Initialize();
 }
 
 void ScriptSystem::Quit() {
+	if (!python_initialized) {
+		return;
+	}
 	Py_Finalize();
 }
 
