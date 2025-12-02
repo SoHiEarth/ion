@@ -20,6 +20,21 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg/installed
+          ${{ github.workspace }}/vcpkg/packages
+          ${{ github.workspace }}/vcpkg/archives
+          ${{ github.workspace }}/vcpkg/buildtrees
+          ${{ github.workspace }}/vcpkg/downloads
+          ${{ github.workspace }}/vcpkg/vcpkg
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-
+
+
     - uses: lukka/get-cmake@latest
     
     - name: Install dependencies
@@ -38,6 +53,28 @@ jobs:
         configurePreset: "ninja-multi-vcpkg"
         buildPreset: "release"
 
+    - name: Create zip archive
+      shell: pwsh
+      run: |
+        $releaseDir = "${{ github.workspace }}\builds\ninja-multi-vcpkg\Release"
+        $zipPath = Join-Path $releaseDir "ion-latest.zip"
+
+        if (Test-Path $zipPath) {
+          Remove-Item $zipPath -Force
+        }
+        $patterns = @("ion.exe","*.dll")
+        $files = @()
+        foreach ($p in $patterns) {
+          $files += Get-ChildItem -Path $releaseDir -Filter $p -File -Recurse -ErrorAction SilentlyContinue
+        }
+
+        if ($files.Count -eq 0) {
+          Write-Host "No files found to compress in $releaseDir"
+          exit 1
+        }
+        
+        Compress-Archive -Path ($files | Select-Object -ExpandProperty FullName) -DestinationPath $zipPath -Force
+
     - name: Release built file
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
@@ -46,6 +83,4 @@ jobs:
         prerelease: true
         title: "Pre-release build"
         files: |
-          ${{ github.workspace }}/builds/ninja-multi-vcpkg/Release/ion.exe
-          ${{ github.workspace }}/builds/ninja-multi-vcpkg/Release/*.dll
-          
+          builds/ninja-multi-vcpkg/Release/ion-latest.zip
