@@ -62,6 +62,11 @@ public:
   int Init();
   GLFWwindow *GetWindow();
   glm::vec2 GetWindowSize();
+	int GetRenderScale();
+  void SetRenderScale(int scale);
+	glm::vec3 GetClearColor();
+	void SetClearColor(glm::vec3 color);
+  
   std::shared_ptr<GPUData> CreateData(DataDescriptor&);
   void DestroyData(std::shared_ptr<GPUData>);
   void BindData(std::shared_ptr<GPUData>);
@@ -84,6 +89,7 @@ public:
 
   void DrawWorld(std::shared_ptr<World>, RenderPass);
   void DestroyShader(std::shared_ptr<Shader>);
+  void Clear();
   void Clear(glm::vec4);
   int Render(std::shared_ptr<Framebuffer> color, std::shared_ptr<Framebuffer> normal, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world);
   void Present();

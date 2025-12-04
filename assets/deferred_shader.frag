@@ -1,6 +1,7 @@
 #version 330 core
 
 struct Light {
+  int type; // 0: global, 1: point
   vec2 position;
   float intensity;
   float radial_falloff;
@@ -29,15 +30,20 @@ void main() {
   
   vec3 total_lighting = vec3(0.0);
   for (int i = 0; i < light_count && i < MAX_LIGHTS; i++) {
-    vec2 light_offset = lights[i].position - TexCoord;
-    vec3 light_dir = normalize(vec3(light_offset, 0.0));
-    float distance = length(light_offset);
-    float attenuation = lights[i].intensity / (1.0 + lights[i].radial_falloff * distance * distance);
-    attenuation = max(attenuation, 0.0);
-    float diff = max(dot(normal, light_dir), 0.0);
-    total_lighting += albedo * lights[i].color * diff * attenuation;
-    float volumetric = lights[i].volumetric_intensity / (1.0 + distance * distance);
-    total_lighting += lights[i].color * volumetric * attenuation;
+    if (lights[i].type == 0) {
+      total_lighting += albedo * lights[i].color * lights[i].intensity;
+    }
+    else if (lights[i].type == 1) {
+      vec2 light_offset = lights[i].position - TexCoord;
+      vec3 light_dir = normalize(vec3(light_offset, 0.0));
+      float distance = length(light_offset);
+      float attenuation = lights[i].intensity / (1.0 + lights[i].radial_falloff * distance * distance);
+      attenuation = max(attenuation, 0.0);
+      float diff = max(dot(normal, light_dir), 0.0);
+      total_lighting += albedo * lights[i].color * diff * attenuation;
+      float volumetric = lights[i].volumetric_intensity / (1.0 + distance * distance);
+      total_lighting += lights[i].color * volumetric * attenuation;
+    }
   }
   
   FragColor = vec4(total_lighting, 1.0);

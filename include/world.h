@@ -11,16 +11,17 @@ const EntityID NULL_ENTITY = std::numeric_limits<EntityID>::max();
 struct World {
 private:
   EntityID next_id = 1;
+  std::map<EntityID, std::string> markers;
   std::map<EntityID, std::shared_ptr<Transform>> transforms;
   std::map<EntityID, std::shared_ptr<Renderable>> renderables;
   std::map<EntityID, std::shared_ptr<PhysicsBody>> physics_bodies;
   std::map<EntityID, std::shared_ptr<Camera>> cameras;
   std::map<EntityID, std::shared_ptr<Light>> lights;
-	std::map<EntityID, std::shared_ptr<Script>> scripts;
-	std::map<EntityID, std::shared_ptr<Player>> players;
-	std::map<EntityID, std::shared_ptr<void>> custom_components;
+	std::map<EntityID, std::shared_ptr<Script>> scripts;	
+	std::map<EntityID, std::shared_ptr<void*>> custom_components;
 
 public:
+  std::map<EntityID, std::string>& GetMarkers();
 	// Creates a new entity and returns its ID
 	// Note: Adds a transform component after creating an entity
   EntityID CreateEntity();

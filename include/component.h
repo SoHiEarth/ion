@@ -11,7 +11,7 @@ struct Shader;
 struct GPUData;
 
 enum class ProjectionMode : std::uint8_t { PERSPECTIVE = 0, ORTHOGRAPHIC = 1 };
-
+enum class LightType : std::uint8_t { GLOBAL = 0, POINT = 1 };
 struct ION_API Transform {
   glm::vec2 position = glm::vec2(0.0f);
   int layer = 0;
@@ -32,6 +32,7 @@ struct ION_API Renderable {
 };
 
 struct ION_API Light {
+	LightType type = LightType::POINT;
   float intensity = 1.0f;
   float radial_falloff = 1.0f;
 	float volumetric_intensity = 0.0f;

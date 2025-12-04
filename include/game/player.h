@@ -3,8 +3,5 @@
 #include <map>
 #include "component.h"
 
-struct Player {
-	Transform transform;
-	PhysicsBody physics_body;
-	Renderable renderable;
-};
+// Player Marker: Represents that the associated entity is a player.
+struct Player {};

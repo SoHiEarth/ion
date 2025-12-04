@@ -26,8 +26,12 @@ template <> std::map<EntityID, std::shared_ptr<Script>> &World::GetComponentSet<
   return scripts;
 }
 
-template <> std::map<EntityID, std::shared_ptr<void>>& World::GetComponentSet<void>() {
+template <> std::map<EntityID, std::shared_ptr<void*>>& World::GetComponentSet<void*>() {
   return custom_components;
+}
+
+std::map<EntityID, std::string>& World::GetMarkers() {
+  return markers;
 }
 
 EntityID World::CreateEntity() {

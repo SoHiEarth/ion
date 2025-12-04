@@ -22,8 +22,27 @@ class RenderSystemConfig {
   glm::vec2 window_size = glm::vec2(800, 600);
 	int render_scale = 4;
 	float camera_z = 3.0f;
+	glm::vec3 clear_color = glm::vec3(0.1f, 0.1f, 0.1f);
 };
+
 static RenderSystemConfig r_config;
+
+int RenderSystem::GetRenderScale() {
+  return r_config.render_scale;
+}
+
+void RenderSystem::SetRenderScale(int scale) {
+  r_config.render_scale = scale;
+  UpdateFramebuffers();
+}
+
+glm::vec3 RenderSystem::GetClearColor() {
+  return r_config.clear_color;
+}
+
+void RenderSystem::SetClearColor(glm::vec3 color) {
+  r_config.clear_color = color;
+}
 
 static void SizeCallback(GLFWwindow *window, int w, int h) {
   r_config.window_size.x = w;
@@ -140,6 +159,11 @@ void RenderSystem::DestroyShader(std::shared_ptr<Shader> shader) {
   shader.reset();
 }
 
+void RenderSystem::Clear() {
+  glClearColor(r_config.clear_color.r, r_config.clear_color.g, r_config.clear_color.b, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+}
+
 void RenderSystem::Clear(glm::vec4 color) {
   glClearColor(color.r, color.g, color.b, color.a);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -178,6 +202,7 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
     glm::vec4 light_clip_pos = projection * view * glm::vec4(light_world_pos, 1.0f);
     glm::vec2 light_texcoord = ((glm::vec2(light_clip_pos) / light_clip_pos.w) + 1.0f) * 0.5f;
     // TODO: Pack data into vec4s, reduce calls by half.
+		shader->SetUniform("lights[" + std::to_string(i) + "].type", static_cast<int>(light->type));
     shader->SetUniform("lights[" + std::to_string(i) + "].position", light_texcoord);
     shader->SetUniform("lights[" + std::to_string(i) + "].color", light->color);
     shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light->intensity);

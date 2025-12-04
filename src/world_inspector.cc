@@ -3,20 +3,63 @@
 #include "texture.h"
 #include "world.h"
 #include "development/gui.h"
+#include <imgui_stdlib.h>
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
+#include "context.h"
 
 void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
   ImGui::Begin("World");
+  if (ImGui::CollapsingHeader("Render Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+    auto render_scale = ion::GetSystem<RenderSystem>().GetRenderScale();
+    if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
+      ion::GetSystem<RenderSystem>().SetRenderScale(render_scale);
+    }
+		auto clear_color = ion::GetSystem<RenderSystem>().GetClearColor();
+    if (ImGui::ColorEdit3("Clear Color", glm::value_ptr(clear_color), 0.01f)) {
+      ion::GetSystem<RenderSystem>().SetClearColor(clear_color);
+		}
+	}
+
   if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::Button("Create Entity")) {
       world->CreateEntity();
     }
 
     static EntityID selected_entity;
+    ImGui::SameLine();
+    if (ImGui::Button("Add Marker")) {
+      ImGui::OpenPopup("Add Marker");
+			selected_entity = -1;
+    }
+
+    ImGui::SameLine();
     if (ImGui::Button("Add Component")) {
       ImGui::OpenPopup("Add Component");
       selected_entity = -1;
+    }
+
+    if (ImGui::BeginPopupModal("Add Marker")) {
+      ImGui::SeparatorText("Select Entity");
+      for (auto& [id, transform] : world->GetComponentSet<Transform>()) {
+        if (ImGui::Selectable(std::format("Entity {}", id).c_str(), selected_entity == id, ImGuiSelectableFlags_DontClosePopups)) {
+          selected_entity = id;
+        }
+      }
+      ImGui::SeparatorText("Enter Marker Name");
+			static std::string name = "";
+			ImGui::InputText("Marker Name", &name);
+      if (ImGui::Button("Add") && selected_entity != -1 && !name.empty()) {
+        world->GetMarkers()[selected_entity] = name;
+        name.clear();
+        ImGui::CloseCurrentPopup();
+			}
+      if (ImGui::Button("Cancel")) {
+        name.clear();
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::EndPopup();
+
     }
 
     if (ImGui::BeginPopupModal("Add Component")) {
@@ -65,7 +108,7 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
     if (ImGui::CollapsingHeader(std::format("Entity {}", id).c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
       if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::DragFloat2("Position", glm::value_ptr(transform->position), 0.1f);
-        ImGui::DragInt("Layer", &transform->layer);
+        ImGui::DragInt("Layer", &transform->layer, 1.0F, 0, 100);
         ImGui::DragFloat2("Scale", glm::value_ptr(transform->scale), 0.1f);
         ImGui::DragFloat("Rotation", &transform->rotation, 0.1f);
         ImGui::TreePop();
@@ -104,6 +147,12 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
       if (world->ContainsComponent<Light>(id)) {
         if (ImGui::TreeNode("Light")) {
           auto light = world->GetComponent<Light>(id);
+          // Light type combo box
+					const char* light_types[] = { "Global", "Point" };
+					int current_type = static_cast<int>(light->type);
+					if (ImGui::Combo("Type", &current_type, light_types, IM_ARRAYSIZE(light_types))) {
+						light->type = static_cast<LightType>(current_type);
+					}
           ImGui::ColorEdit3("Color", glm::value_ptr(light->color), 0.01f);
           ImGui::DragFloat("Intensity", &light->intensity, 0.01f);
           ImGui::DragFloat("Radial Falloff", &light->radial_falloff, 0.01f);

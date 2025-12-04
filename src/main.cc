@@ -13,6 +13,7 @@
 #include "shader.h"
 #include "world_inspector.h"
 #include "development/gui.h"
+#include "game/game.h"
 
 std::vector<float> vertices = {
    0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
@@ -26,6 +27,8 @@ screen_vertices = {
   -1.0f, -1.0f,  0.0f,  0.0f,
   -1.0f,  1.0f,  0.0f,  1.0f
 };
+
+GameSystem game_system;
 
 std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
@@ -122,6 +125,7 @@ int main(int argc, char **argv) {
 
   auto light_entity = world->CreateEntity();
 	auto light = world->NewComponent<Light>(light_entity);
+	light->type = LightType::GLOBAL;
 	light->intensity = 1.0f;
 	light->radial_falloff = 1.0f;
 	light->color = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -131,6 +135,7 @@ int main(int argc, char **argv) {
 		ion::gui::NewFrame();
     ion::GetSystem<ScriptSystem>().Update(world);
     ion::GetSystem<PhysicsSystem>().Update();
+		game_system.Update(world);
     ion::GetSystem<AssetSystem>().Inspector();
 
     ION_GUI_PREP_CONTEXT();
@@ -156,7 +161,7 @@ int main(int argc, char **argv) {
     WorldInspector(world, defaults);
     
     ion::GetSystem<RenderSystem>().BindFramebuffer(color_buffer);
-    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Clear();
     ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_COLOR);
     ion::GetSystem<RenderSystem>().BindFramebuffer(normal_buffer);
     ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
