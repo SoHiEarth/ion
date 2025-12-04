@@ -19,17 +19,14 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
-
-    - name: Cache vcpkg binary cache
+    - name: Cache vcpkg directory
       uses: actions/cache@v4
       with:
-        path: |
-          ~\AppData\Local\vcpkg\archives
+        path: D:/a/ion/ion/vcpkg
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ github.run_id }}
         restore-keys: |
           vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
           vcpkg-${{ runner.os }}-
-
 
     - uses: lukka/get-cmake@latest
     
