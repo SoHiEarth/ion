@@ -1,4 +1,4 @@
-name: CMake + Vcpkg + Ninja on Windows
+name: Windows Build
 
 on:
   push:
