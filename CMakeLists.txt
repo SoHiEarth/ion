@@ -14,7 +14,21 @@ find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Development REQUIRED)
 
-add_library(ion-base SHARED
+add_library(ion-development STATIC
+  src/development/gui.cc
+)
+target_compile_features(ion-development PRIVATE cxx_std_20)
+#target_compile_definitions(ion-development PRIVATE ION_EXPORTS)
+set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(ion-development PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+target_include_directories(ion-development PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(ion-development PUBLIC
+    glfw
+    imgui::imgui
+    OpenGL::GL
+)
+
+add_library(ion-base STATIC
   src/assets.cc
   src/context.cc
   src/shader.cc
@@ -23,27 +37,13 @@ add_library(ion-base SHARED
   src/texture.cc
   src/physics.cc
   src/world.cc
+  src/world_inspector.cc
 )
-
-add_library(ion-development SHARED
-  src/development/gui.cc
-)
-target_compile_features(ion-development PUBLIC cxx_std_20)
-target_compile_definitions(ion-development PRIVATE ION_EXPORTS)
-set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(ion-development PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
-target_include_directories(ion-development PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(ion-development PUBLIC
-    glfw
-    imgui::imgui
-    OpenGL::GL
-)
-
-target_compile_features(ion-base PUBLIC cxx_std_20)
-target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
-set_target_properties(ion-base PROPERTIES PUBLIC ${PROJECT_VERSION})
-set_target_properties(ion-base PROPERTIES PUBLIC ${PROJECT_VERSION_MAJOR})
-target_include_directories(ion-base PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_compile_features(ion-base PRIVATE cxx_std_20)
+#target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
+set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION})
+set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION_MAJOR})
+target_include_directories(ion-base PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ion-base PUBLIC
     box2d::box2d
     glad::glad
@@ -56,20 +56,21 @@ target_link_libraries(ion-base PUBLIC
     ion-development
 )
 
-add_library(ion-game SHARED
+add_library(ion-game STATIC
   src/game/player.cc
 )
-target_compile_features(ion-game PUBLIC cxx_std_20)
-target_compile_definitions(ion-game PUBLIC ION_EXPORTS)
+target_compile_features(ion-game PRIVATE cxx_std_20)
+#target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
 set_target_properties(ion-game PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion-game PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
-target_include_directories(ion-game PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(ion-game PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ion-game PUBLIC
     ion-base
 )
 
 add_executable(ion)
 target_compile_features(ion PRIVATE cxx_std_20)
+#target_compile_definitions(ion PRIVATE ION_IMPORTS)
 target_sources(ion PRIVATE
   src/main.cc
 )

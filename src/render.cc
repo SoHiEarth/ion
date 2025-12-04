@@ -182,6 +182,7 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
     shader->SetUniform("lights[" + std::to_string(i) + "].color", light->color);
     shader->SetUniform("lights[" + std::to_string(i) + "].intensity", light->intensity);
     shader->SetUniform("lights[" + std::to_string(i) + "].radial_falloff", light->radial_falloff);
+		shader->SetUniform("lights[" + std::to_string(i) + "].volumetric_intensity", light->volumetric_intensity);
   }  
   BindData(quad);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

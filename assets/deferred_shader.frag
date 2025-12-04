@@ -4,6 +4,7 @@ struct Light {
   vec2 position;
   float intensity;
   float radial_falloff;
+  float volumetric_intensity;
   vec3 color;
 };
 
@@ -35,6 +36,8 @@ void main() {
     attenuation = max(attenuation, 0.0);
     float diff = max(dot(normal, light_dir), 0.0);
     total_lighting += albedo * lights[i].color * diff * attenuation;
+    float volumetric = lights[i].volumetric_intensity / (1.0 + distance * distance);
+    total_lighting += lights[i].color * volumetric * attenuation;
   }
   
   FragColor = vec4(total_lighting, 1.0);

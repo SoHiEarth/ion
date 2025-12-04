@@ -3,6 +3,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <memory>
+#include <functional>
 
 static ImGuiContext* g_SharedImGuiContext = nullptr;
 void* ion_gui_alloc(size_t size, void* user_data) {

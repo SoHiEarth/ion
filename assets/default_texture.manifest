@@ -1,5 +1,3 @@
 relative:true
-flip:false
-path:/test.png
-force_channels:true
-channels:3
+color:/test_sprite/color.manifest
+normal:/test_sprite/normal.manifest

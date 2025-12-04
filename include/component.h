@@ -34,6 +34,7 @@ struct ION_API Renderable {
 struct ION_API Light {
   float intensity = 1.0f;
   float radial_falloff = 1.0f;
+	float volumetric_intensity = 0.0f;
   glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 };
 
