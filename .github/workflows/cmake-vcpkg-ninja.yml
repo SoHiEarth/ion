@@ -20,18 +20,14 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Cache vcpkg
+    - name: Cache vcpkg binary cache
       uses: actions/cache@v4
       with:
         path: |
-          ${{ github.workspace }}/vcpkg/installed
-          ${{ github.workspace }}/vcpkg/packages
-          ${{ github.workspace }}/vcpkg/archives
-          ${{ github.workspace }}/vcpkg/buildtrees
-          ${{ github.workspace }}/vcpkg/downloads
-          ${{ github.workspace }}/vcpkg/vcpkg
-        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          ~\AppData\Local\vcpkg\archives
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ github.run_id }}
         restore-keys: |
+          vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
           vcpkg-${{ runner.os }}-
 
 
