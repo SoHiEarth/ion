@@ -19,21 +19,14 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
-
-    - name: Cache vcpkg
+    - name: Cache vcpkg directory
       uses: actions/cache@v4
       with:
-        path: |
-          ${{ github.workspace }}/vcpkg/installed
-          ${{ github.workspace }}/vcpkg/packages
-          ${{ github.workspace }}/vcpkg/archives
-          ${{ github.workspace }}/vcpkg/buildtrees
-          ${{ github.workspace }}/vcpkg/downloads
-          ${{ github.workspace }}/vcpkg/vcpkg
-        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+        path: D:/a/ion/ion/vcpkg
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ github.run_id }}
         restore-keys: |
+          vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
           vcpkg-${{ runner.os }}-
-
 
     - uses: lukka/get-cmake@latest
     
@@ -44,7 +37,6 @@ jobs:
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        runVcpkgInstall: true
         vcpkgJsonGlob: "./vcpkg.json"
     
     - name: Run CMake
