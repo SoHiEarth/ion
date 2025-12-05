@@ -11,6 +11,7 @@ void ion::dev::internal::WorldPathList::WriteToPath(const std::filesystem::path&
 	for (const auto& [world_id, world_info] : worlds) {
 		file << world_id << "," << world_info.first.string() << "," << static_cast<int>(world_info.second) << "\n";
 	}
+	file.close();
 }
 
 static bool CheckWorldPath(const std::filesystem::path& path) {
@@ -24,15 +25,18 @@ void ion::dev::Packer::CreatePackaged(PackageData& package_data) {
 			printf("World path %s does not exist or is not a file.\n", world_path.second.string().c_str());
 		}
 		else {
-			// Get the relative path of world
-			auto relative = std::filesystem::relative(world_path.second);
-			world_list.worlds.insert({ world_path.first, {relative, ion::dev::internal::WorldLoadType::LOAD_ON_START} });
-			printf("Added %s to world list\n", relative.c_str());
+			// Copy world manifest to output
+			if (!std::filesystem::exists(package_data.output_path)) {
+				std::filesystem::create_directories(package_data.output_path);
+			}
+			std::filesystem::copy_file(world_path.second, package_data.output_path / world_path.second.filename(), std::filesystem::copy_options::overwrite_existing);
+			world_list.worlds.insert({ world_path.first, {world_path.second.filename(), ion::dev::internal::WorldLoadType::LOAD_ON_START} });
+			printf("Added %s to world list\n", world_path.second.filename().string().c_str());
 		}
 	}
 	
 	try {
-		world_list.WriteToPath(package_data.output_path.relative_path() / "worlds.lst");
+		world_list.WriteToPath(package_data.output_path / "world_list.cfg");
 	}
 	catch (const std::exception& e) {
 		printf("Failed to write world list: %s\n", e.what());

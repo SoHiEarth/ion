@@ -3,6 +3,7 @@ project(ion VERSION 1.0 DESCRIPTION "ion")
 project(ion-base VERSION 1.0 DESCRIPTION "ion base systems")
 project(ion-game VERSION 1.0 DESCRIPTION "ion game components")
 project(ion-development VERSION 1.0 DESCRIPTION "ion dev tools")
+project(ion-run VERSION 1.0 DESCRIPTION "ion runner")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 find_package(box2d CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
@@ -76,7 +77,7 @@ target_compile_features(ion PRIVATE cxx_std_20)
 #target_compile_definitions(ion PRIVATE ION_IMPORTS)
 target_sources(ion PRIVATE
   src/main.cc
- "include/game/game.h")
+)
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 target_include_directories(ion PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -86,3 +87,21 @@ target_link_libraries(ion PRIVATE
     ion-game
     ion-development
 )
+
+add_executable(ion-run)
+target_compile_features(ion-run PRIVATE cxx_std_20)
+#target_compile_definitions(ion-run PRIVATE ION_IMPORTS)
+target_sources(ion-run PRIVATE
+  src/run/main.cc
+)
+set_target_properties(ion-run PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(ion-run PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+target_include_directories(ion-run PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(ion-run PRIVATE
+    ion-base
+    ion-game
+    ion-development
+)
+# ion-run should built in engine/tools/run
+set_target_properties(ion-run PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/assets/tools/run)
+set_target_properties(ion-run PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/assets/tools/run)

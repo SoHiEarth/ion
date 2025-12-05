@@ -47,7 +47,7 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
       auto path = tinyfd_selectFolderDialog("Select Output Directory", nullptr);
       if (path) {
         auto package_data = ion::dev::PackageData{
-          {},
+          all_worlds,
           path
         };
         ion::dev::Packer::CreatePackaged(package_data);

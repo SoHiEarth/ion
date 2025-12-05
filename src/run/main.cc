@@ -1,19 +1,14 @@
+#include <context.h>
+#include "development/package.h"
+#include <fstream>
+#include <sstream>
 #include "assets.h"
-#include "context.h"
 #include "physics.h"
-#include "texture.h"
 #include "render.h"
-#include "world.h"
 #include "script.h"
-#include <tinyfiledialogs/tinyfiledialogs.h>
-#include <glm/gtc/type_ptr.hpp>
-#include <imgui.h>
-#include <imgui_stdlib.h>
-#include <vector>
-#include <format>
+#include "defaults.h"
+#include "texture.h"
 #include "shader.h"
-#include "world_inspector.h"
-#include "development/gui.h"
 #include "game/game.h"
 
 std::vector<float> vertices = {
@@ -34,54 +29,75 @@ GameSystem game_system;
 std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
 
-int main(int argc, char **argv) {
-	auto world_path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
-  if (!world_path) {
-    tinyfd_messageBox("Error", "No world selected. Exiting.", "ok", "error", 1);
-    return -1;
-  }
-  auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world_path);
-  ion::GetSystem<RenderSystem>().Init();
-  ion::gui::Init(ion::GetSystem<RenderSystem>().GetWindow());
-  ion::GetSystem<PhysicsSystem>().Init();
-  ion::GetSystem<ScriptSystem>().Init();
+ion::dev::internal::WorldPathList ReadWorldList() {
+	ion::dev::internal::WorldPathList world_list{};
+	std::ifstream file("world_list.cfg");
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open world list file: world_list.cfg");
+	}
+	std::string line;
+	while (std::getline(file, line)) {
+		std::istringstream line_stream(line);
+		std::string world_id_str, path_str, load_type_str;
+		if (std::getline(line_stream, world_id_str, ',') &&
+			std::getline(line_stream, path_str, ',') &&
+			std::getline(line_stream, load_type_str)) {
+			int world_id = std::stoi(world_id_str);
+			auto path = std::filesystem::path(path_str);
+			auto load_type = static_cast<ion::dev::internal::WorldLoadType>(std::stoi(load_type_str));
+			world_list.worlds.insert({ world_id, {path, load_type} });
+		}
+	}
+	return world_list;
+}
 
-  AttributePointer position_pointer {
+int main() {
+	// Read file in world_list.cfg
+	printf("Starting ION Engine...\n");
+	auto world_list = ReadWorldList();
+	printf("Loaded world list with %zu worlds.\n", world_list.worlds.size());
+	auto world_begin_path = world_list.worlds.begin()->second.first.string();
+	auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world_begin_path);
+	printf("Loaded world from path: %s\n", world_begin_path.c_str());
+	ion::GetSystem<RenderSystem>().Init();
+	ion::GetSystem<PhysicsSystem>().Init();
+	ion::GetSystem<ScriptSystem>().Init();
+  AttributePointer position_pointer{
     .size = 3,
     .type = DataType::FLOAT,
     .normalized = false,
     .stride = 5 * sizeof(float),
-    .pointer = (void *)0
+    .pointer = (void*)0
   };
-  AttributePointer texture_pointer {
+  AttributePointer texture_pointer{
     .size = 2,
     .type = DataType::FLOAT,
     .normalized = false,
     .stride = 5 * sizeof(float),
-    .pointer = (void *)(3 * sizeof(float))
+    .pointer = (void*)(3 * sizeof(float))
   };
-  DataDescriptor data_desc {
+  DataDescriptor data_desc{
     .pointers = {position_pointer, texture_pointer},
     .element_enabled = true,
     .vertices = vertices,
     .indices = indices
   };
 
-  AttributePointer screen_position_pointer {
+  AttributePointer screen_position_pointer{
     .size = 2,
     .type = DataType::FLOAT,
     .normalized = false,
     .stride = 4 * sizeof(float),
-    .pointer = (void *)0
-	};
-  AttributePointer screen_texture_pointer {
+    .pointer = (void*)0
+  };
+  AttributePointer screen_texture_pointer{
     .size = 2,
     .type = DataType::FLOAT,
     .normalized = false,
     .stride = 4 * sizeof(float),
-    .pointer = (void *)(2 * sizeof(float))
-	};
-  DataDescriptor screen_data_desc {
+    .pointer = (void*)(2 * sizeof(float))
+  };
+  DataDescriptor screen_data_desc{
     .pointers = {screen_position_pointer, screen_texture_pointer},
     .element_enabled = true,
     .vertices = screen_vertices,
@@ -103,8 +119,8 @@ int main(int argc, char **argv) {
   auto bloom_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   framebuffer_info.name = "Bloom 2";
   auto bloom_buffer2 = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
-	framebuffer_info.name = "Tonemapped";
-	auto tonemap_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
+  framebuffer_info.name = "Tonemapped";
+  auto tonemap_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   auto& final_framebuffer = shaded;
 
   auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader.manifest");
@@ -118,63 +134,23 @@ int main(int argc, char **argv) {
     .default_textures = ion::GetSystem<AssetSystem>().LoadAsset<TexturePack>("assets/default_texture.manifest"),
     .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader.manifest"),
     .default_data = ion::GetSystem<RenderSystem>().CreateData(data_desc)
-	};
-
-  auto camera_entity = world->CreateEntity();
-  world->NewComponent<Camera>(camera_entity);
-  auto entity = world->CreateEntity();
-  auto renderable = world->NewComponent<Renderable>(entity);
-	renderable->color = defaults.default_textures->color;
-  renderable->normal = defaults.default_textures->normal;
-	renderable->shader = defaults.default_shader;
-	renderable->data = defaults.default_data;
-
-  auto light_entity = world->CreateEntity();
-	auto light = world->NewComponent<Light>(light_entity);
-	light->type = LightType::GLOBAL;
-	light->intensity = 1.0f;
-	light->radial_falloff = 1.0f;
-	light->color = glm::vec3(1.0f, 1.0f, 1.0f);
+  };
 
   while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {
     glfwPollEvents();
-		ion::gui::NewFrame();
     ion::GetSystem<ScriptSystem>().Update(world);
     ion::GetSystem<PhysicsSystem>().Update();
-		game_system.Update(world);
-    ion::GetSystem<AssetSystem>().Inspector();
+    game_system.Update(world); 
 
-    ION_GUI_PREP_CONTEXT();
-    {
-      ImGui::Begin("Framebuffers");
-			ImGui::Checkbox("Enable Bloom", &bloom_enable);
-      for (auto& [buffer, name] : ion::GetSystem<RenderSystem>().GetFramebuffers()) {
-        ImGui::PushID(buffer->framebuffer);
-        ImGui::Image(buffer->colorbuffer,
-          ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
-        ImGui::SameLine();
-        ImGui::TextUnformatted(name.c_str());
-        ImGui::SameLine();
-				if (ImGui::Button("Set as Final")) {
-          final_framebuffer = buffer;
-        }
-        ImGui::PopID();
-      }
-
-      ImGui::End();
-    }
-
-    WorldInspector(world, defaults);
-    
     ion::GetSystem<RenderSystem>().BindFramebuffer(color_buffer);
     ion::GetSystem<RenderSystem>().Clear();
     ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_COLOR);
     ion::GetSystem<RenderSystem>().BindFramebuffer(normal_buffer);
-    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
     ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_NORMAL);
 
     ion::GetSystem<RenderSystem>().BindFramebuffer(shaded);
-    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
     ion::GetSystem<RenderSystem>().Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
     ion::GetSystem<RenderSystem>().UnbindFramebuffer();
 
@@ -209,7 +185,6 @@ int main(int argc, char **argv) {
     //Context::Get().render_sys.RunPass(tonemap_buffer, shaded, tonemap_shader, screen_data);
 
     ion::GetSystem<RenderSystem>().DrawFramebuffer(final_framebuffer, screen_shader, screen_data);
-    ion::gui::Render();
     ion::GetSystem<RenderSystem>().Present();
   }
   ion::GetSystem<PhysicsSystem>().Quit();
@@ -220,6 +195,6 @@ int main(int argc, char **argv) {
   ion::GetSystem<RenderSystem>().DestroyShader(defaults.default_shader);
   ion::GetSystem<ScriptSystem>().Quit();
   ion::GetSystem<RenderSystem>().Quit();
-  ion::gui::Quit();
   return 0;
+	return 0;
 }

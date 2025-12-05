@@ -2,13 +2,13 @@
 #include "exports.h"
 #include "world.h"
 #include <memory>
-#include <string>
+#include <filesystem>
 
 namespace ion {
 	namespace dev {
 		class ION_API Writer {
 		public:
-			static void WriteToDisk(std::string_view filepath, std::shared_ptr<World> world);
+			static void WriteToDisk(std::filesystem::path filepath, std::shared_ptr<World> world);
 		};
 	} // namespace dev
 } // namespace ion
