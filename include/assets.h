@@ -9,8 +9,9 @@ struct Texture;
 struct Shader;
 
 class ION_API AssetSystem {
-  std::vector<std::shared_ptr<Texture>> textures;
-  std::vector<std::shared_ptr<Shader>> shaders;
+  // ID, Asset
+  std::map<std::string, std::shared_ptr<Texture>> textures;
+  std::map<std::string, std::shared_ptr<Shader>> shaders;
 	std::filesystem::path project_root;
 public:
   void SetProjectRoot(std::filesystem::path path) {
@@ -23,6 +24,12 @@ public:
   template <typename T>
 	std::shared_ptr<T> LoadAsset(std::filesystem::path path);
   template <typename T> void DestroyAsset(std::shared_ptr<T> asset);
+  std::map<std::string, std::shared_ptr<Texture>>& GetTextures() {
+    return textures;
+	}
+  std::map<std::string, std::shared_ptr<Shader>>& GetShaders() {
+    return shaders;
+  }
 
   void Inspector();
 };

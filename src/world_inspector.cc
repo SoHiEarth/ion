@@ -224,10 +224,10 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
           if (ImGui::Button("Add Parameter")) {
             param_key.clear();
             param_value.clear();
-            ImGui::OpenPopup("AddParameterPopup");
+            ImGui::OpenPopup("Add Parameter");
           }
           bool add_parameter_open = true;
-          if (ImGui::BeginPopupModal("AddParameterPopup", &add_parameter_open)) {
+          if (ImGui::BeginPopupModal("Add Parameter", &add_parameter_open)) {
             ImGui::Text("Add Parameter");
             ImGui::InputText("Key", &param_key);
             ImGui::InputText("Value", &param_value);

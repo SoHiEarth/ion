@@ -22,7 +22,7 @@ class RenderSystemConfig {
   glm::vec2 window_size = glm::vec2(800, 600);
 	int render_scale = 4;
 	float camera_z = 3.0f;
-	glm::vec3 clear_color = glm::vec3(0.1f, 0.1f, 0.1f);
+	glm::vec3 clear_color = glm::vec3(0.0f, 0.0f, 0.0f);
 };
 
 static RenderSystemConfig r_config;

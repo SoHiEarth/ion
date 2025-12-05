@@ -171,18 +171,18 @@ int main(int argc, char **argv) {
     ion::GetSystem<RenderSystem>().Clear();
     ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_COLOR);
     ion::GetSystem<RenderSystem>().BindFramebuffer(normal_buffer);
-    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Clear();
     ion::GetSystem<RenderSystem>().DrawWorld(world, RENDER_PASS_NORMAL);
 
     ion::GetSystem<RenderSystem>().BindFramebuffer(shaded);
-    ion::GetSystem<RenderSystem>().Clear({0.0f, 0.0f, 0.0f, 1.0f});
+    ion::GetSystem<RenderSystem>().Clear();
     ion::GetSystem<RenderSystem>().Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
     ion::GetSystem<RenderSystem>().UnbindFramebuffer();
 
     // Bloom
     if (bloom_enable) {
       ion::GetSystem<RenderSystem>().BindFramebuffer(bloom_buffer);
-      ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
+      ion::GetSystem<RenderSystem>().Clear();
       ion::GetSystem<RenderSystem>().UseShader(bloom_shader);
       ion::GetSystem<RenderSystem>().RunPass(shaded, bloom_buffer, bloom_shader, screen_data);
 
@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
         auto& source = horizontal ? bloom_buffer : bloom_buffer2;
         auto& target = horizontal ? bloom_buffer2 : bloom_buffer;
         ion::GetSystem<RenderSystem>().BindFramebuffer(target);
-        ion::GetSystem<RenderSystem>().Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
+        ion::GetSystem<RenderSystem>().Clear();
         bloom_blur_shader->SetUniform("horizontal", (int)horizontal);
         ion::GetSystem<RenderSystem>().RunPass(source, target, bloom_blur_shader, screen_data);
         horizontal = !horizontal;

@@ -29,8 +29,8 @@ GameSystem game_system;
 std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
 
-ion::dev::internal::WorldPathList ReadWorldList() {
-	ion::dev::internal::WorldPathList world_list{};
+std::map<int, std::filesystem::path> ReadWorldList() {
+	std::map<int, std::filesystem::path> worlds{};
 	std::ifstream file("world_list.cfg");
 	if (!file.is_open()) {
 		throw std::runtime_error("Failed to open world list file: world_list.cfg");
@@ -44,24 +44,27 @@ ion::dev::internal::WorldPathList ReadWorldList() {
 			std::getline(line_stream, load_type_str)) {
 			int world_id = std::stoi(world_id_str);
 			auto path = std::filesystem::path(path_str);
-			auto load_type = static_cast<ion::dev::internal::WorldLoadType>(std::stoi(load_type_str));
-			world_list.worlds.insert({ world_id, {path, load_type} });
+			worlds.insert({ world_id, path });
 		}
 	}
-	return world_list;
+	return worlds;
 }
 
 int main() {
 	// Read file in world_list.cfg
-	printf("Starting ION Engine...\n");
 	auto world_list = ReadWorldList();
-	printf("Loaded world list with %zu worlds.\n", world_list.worlds.size());
-	auto world_begin_path = world_list.worlds.begin()->second.first.string();
+	printf("Loaded world list with %zu worlds.\n", world_list.size());
+  if (world_list.empty()) {
+    printf("No worlds to load. Exiting.\n");
+    return 0;
+	}
+	auto world_begin_path = world_list.begin()->second.string();
 	auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world_begin_path);
 	printf("Loaded world from path: %s\n", world_begin_path.c_str());
 	ion::GetSystem<RenderSystem>().Init();
 	ion::GetSystem<PhysicsSystem>().Init();
 	ion::GetSystem<ScriptSystem>().Init();
+
   AttributePointer position_pointer{
     .size = 3,
     .type = DataType::FLOAT,

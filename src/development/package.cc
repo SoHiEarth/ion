@@ -2,44 +2,100 @@
 #include "development/package.h"
 #include <fstream>
 #include <sstream>
+#define TOOLS_RUNNER_DIRECTORY "assets/tools/run"
+#define TOOLS_RUNNER_LOCATION "assets/tools/run/ion-run.exe"
 
-void ion::dev::internal::WorldPathList::WriteToPath(const std::filesystem::path& path) {
+void ion::dev::internal::PackInfo::Write(const std::filesystem::path& path) {
 	std::ofstream file(path);
 	if (!file.is_open()) {
 		throw std::runtime_error("Failed to open world path list file for writing: " + path.string());
 	}
-	for (const auto& [world_id, world_info] : worlds) {
-		file << world_id << "," << world_info.first.string() << "," << static_cast<int>(world_info.second) << "\n";
+	for (const auto& [id, path] : worlds) {
+		file << id << "," << path.string() << "\n";
 	}
 	file.close();
+}
+
+void PrepareDirectory(std::filesystem::path path) {
+	if (!std::filesystem::exists(path)) {
+		std::filesystem::create_directory(path);
+	}
+	if (!std::filesystem::exists(path / "assets")) {
+		std::filesystem::create_directory(path / "assets");
+	}
 }
 
 static bool CheckWorldPath(const std::filesystem::path& path) {
 	return std::filesystem::exists(path) && std::filesystem::is_regular_file(path);
 }
 
-void ion::dev::Packer::CreatePackaged(PackageData& package_data) {
-	ion::dev::internal::WorldPathList world_list{};
-	for (const auto& world_path : package_data.world_paths) {
-		if (!CheckWorldPath(world_path.second)) {
-			printf("World path %s does not exist or is not a file.\n", world_path.second.string().c_str());
+std::map<int, std::filesystem::path> CheckWorlds(std::filesystem::path output, std::map<int, std::filesystem::path> world_infos) {
+	std::map<int, std::filesystem::path> valid_worlds;
+	for (const auto& [id, path]: world_infos) {
+		if (!CheckWorldPath(path)) {
+			printf("World path %s does not exist or is not a file.\n", path.string().c_str());
 		}
 		else {
-			// Copy world manifest to output
-			if (!std::filesystem::exists(package_data.output_path)) {
-				std::filesystem::create_directories(package_data.output_path);
-			}
-			std::filesystem::copy_file(world_path.second, package_data.output_path / world_path.second.filename(), std::filesystem::copy_options::overwrite_existing);
-			world_list.worlds.insert({ world_path.first, {world_path.second.filename(), ion::dev::internal::WorldLoadType::LOAD_ON_START} });
-			printf("Added %s to world list\n", world_path.second.filename().string().c_str());
+			printf("World path %s added.\n", path.string().c_str());
+			valid_worlds.insert({id, path});
 		}
 	}
-	
+	return valid_worlds;
+}
+
+void CopyAssets(std::filesystem::path world_path, std::filesystem::path output_path) {
+	// Copy world-specific assets (world_path/assets) into global assets folder (output_path/assets)
+	std::filesystem::path world_assets = world_path.parent_path() / "assets";
+	std::filesystem::path output_assets = output_path / "assets";	
 	try {
-		world_list.WriteToPath(package_data.output_path / "world_list.cfg");
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(world_assets)) {
+			if (entry.is_regular_file()) {
+				std::filesystem::path relative_path = std::filesystem::relative(entry.path(), world_assets);
+				std::filesystem::path target_path = output_assets / relative_path;
+				
+				std::filesystem::create_directories(target_path.parent_path());
+				std::filesystem::copy_file(entry.path(), target_path, std::filesystem::copy_options::overwrite_existing);
+				printf("Copied asset %s to %s\n", entry.path().filename().string().c_str(), target_path.string().c_str());
+			}
+		}
+	}
+	catch (const std::exception& e) {
+		printf("Failed to copy assets from %s: %s\n", world_assets.string().c_str(), e.what());
+	}
+}
+
+void CopyRunner(std::filesystem::path output) {
+	if (!std::filesystem::exists(TOOLS_RUNNER_LOCATION)) {
+		printf("Runner not found at %s\n", TOOLS_RUNNER_LOCATION);
+		return;
+	}
+	std::filesystem::copy_file(TOOLS_RUNNER_LOCATION, output / "ion-run.exe", std::filesystem::copy_options::overwrite_existing);
+	std::filesystem::directory_iterator dll_iter(TOOLS_RUNNER_DIRECTORY);
+	for (const auto& dll_entry : dll_iter) {
+		if (dll_entry.path().extension() == ".dll") {
+			std::filesystem::copy_file(dll_entry.path(), output / dll_entry.path().filename(), std::filesystem::copy_options::overwrite_existing);
+			printf("Copied %s to %s\n", dll_entry.path().filename().string().c_str(), TOOLS_RUNNER_DIRECTORY);
+		}
+	}
+}
+
+bool ion::dev::Packer::CreatePackaged(PackageData& package_data) {
+	PrepareDirectory(package_data.output_path);
+	ion::dev::internal::PackInfo pack_info{};
+	pack_info.worlds = CheckWorlds(package_data.output_path, package_data.world_paths);
+	for (auto& [id, path] : pack_info.worlds) {
+		std::filesystem::copy_file(path, package_data.output_path / "assets" / path.filename(), std::filesystem::copy_options::overwrite_existing);
+		CopyAssets(path, package_data.output_path);
+		path = "assets" / path.filename();
+	}
+	CopyRunner(package_data.output_path);
+
+	try {
+		pack_info.Write(package_data.output_path / "world_list.cfg");
 	}
 	catch (const std::exception& e) {
 		printf("Failed to write world list: %s\n", e.what());
-		return;
+		return false;
 	}
+	return true;
 }
