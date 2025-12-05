@@ -1,3 +1,0 @@
-relative:true
-vertex_path:/deferred_shader.vert
-fragment_path:/deferred_shader.frag

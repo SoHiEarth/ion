@@ -1,3 +1,0 @@
-relative:true
-vertex_path:/bloom_blur_shader.vert
-fragment_path:/bloom_blur_shader.frag

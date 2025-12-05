@@ -123,16 +123,17 @@ int main() {
   auto tonemap_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   auto& final_framebuffer = shaded;
 
-  auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader.manifest");
-  auto screen_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/screen_shader.manifest");
-  auto bloom_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_shader.manifest");
-  auto bloom_blur_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_blur_shader.manifest");
-  auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader.manifest");
-  auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader.manifest");
+  auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader");
+  auto screen_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/screen_shader");
+  auto bloom_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_shader");
+  auto bloom_blur_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_blur_shader");
+  auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader");
+  auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader");
 
   auto defaults = Defaults{
-    .default_textures = ion::GetSystem<AssetSystem>().LoadAsset<TexturePack>("assets/default_texture.manifest"),
-    .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader.manifest"),
+    .default_color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/color.png"),
+		.default_normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/normal.png"),
+    .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader"),
     .default_data = ion::GetSystem<RenderSystem>().CreateData(data_desc)
   };
 

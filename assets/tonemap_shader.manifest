@@ -1,3 +1,0 @@
-relative:true
-vertex_path:/tonemap_shader.vert
-fragment_path:/tonemap_shader.frag

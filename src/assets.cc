@@ -10,6 +10,7 @@
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "render.h"
+#include "development/uuid.h"
 #include "stb_image.h"
 
 static std::string Trim(std::string s) {
@@ -21,10 +22,10 @@ static std::string Trim(std::string s) {
 }
 
 // Expects format key:value
-static std::map<std::string, std::string> ParseManifest(std::string_view path) {
+static std::map<std::string, std::string> ParseManifest(std::filesystem::path path) {
   std::map<std::string, std::string> values{};
   std::ifstream file{};
-  file.open(path.data());
+  file.open(path);
   if (!file.is_open())
     return values;
   std::string line{};
@@ -45,28 +46,21 @@ static std::map<std::string, std::string> ParseManifest(std::string_view path) {
 
 template <>
 std::shared_ptr<Texture>
-AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
-  printf("Loading texture from manifest: %s\n", manifest.data());
+AssetSystem::LoadAsset<Texture>(std::filesystem::path path) {
+	// Check if texture exists
+  if (!std::filesystem::exists(path)) {
+    printf("Texture manifest does not exist: %s\n", path.string().c_str());
+    return nullptr;
+  }
+	// Create a guid for the texture
+	auto guid = ion::uuid::GenerateUUID();
+  printf("Copying asset from %s as %s\n", std::filesystem::absolute(path).string().c_str(), guid.c_str());
+  std::filesystem::copy_file(std::filesystem::absolute(path), GetProjectRoot() / guid, std::filesystem::copy_options::update_existing);
   TextureInfo info{};
-  auto manifest_info = ParseManifest(manifest);
-  if (manifest_info["flip"] == "true") {
-    stbi_set_flip_vertically_on_load(true);
-  }
-  std::string image_path;
-  if (manifest_info["relative"] == "true") {
-    auto directory =
-        std::filesystem::path(manifest).parent_path().generic_string();
-    image_path = directory + manifest_info["path"];
-  } else {
-    image_path = manifest_info["path"];
-  }
-  printf("Loading texture image: %s\n", image_path.c_str());
-  info.data = stbi_load(image_path.c_str(), &info.width, &info.height, 
-                        &info.nr_channels, manifest_info["force_channels"] == "true" ?
-                        std::stoi(manifest_info["channels"]) : 0);
+  info.data = stbi_load((GetProjectRoot() / guid).string().c_str(), &info.width, &info.height, &info.nr_channels, 0);
   if (!info.data) {
-    const char* reason = stbi_failure_reason();
-    printf("Failed to load texture image: %s\n", reason);
+    printf("Failed to load texture image: %s\n", stbi_failure_reason());
+    return nullptr;
   }
 
   auto texture = std::make_shared<Texture>();
@@ -76,64 +70,59 @@ AssetSystem::LoadAsset<Texture>(std::string_view manifest) {
   return texture;
 }
 
-template <>
-std::shared_ptr<TexturePack>
-AssetSystem::LoadAsset<TexturePack>(std::string_view manifest) {
-  TexturePack pack{};
-  auto manifest_info = ParseManifest(manifest);
-  std::string directory;
-  if (manifest_info["relative"] == "true") {
-    directory = std::filesystem::path(manifest).parent_path().generic_string();
-  }
-  pack.color = LoadAsset<Texture>(directory + manifest_info["color"]);
-  pack.normal = LoadAsset<Texture>(directory + manifest_info["normal"]);
-  return std::make_shared<TexturePack>(pack);
-}
-
+// Path is a directory containing vs.glsl and fs.glsl
 template <>
 std::shared_ptr<Shader>
-AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
-  auto manifest_info = ParseManifest(manifest);
-  if (manifest_info["relative"] == "true") {
-    auto directory =
-        std::filesystem::path(manifest).parent_path().generic_string();
-    auto shader =
-        std::make_shared<Shader>(directory + manifest_info["vertex_path"],
-                                 directory + manifest_info["fragment_path"]);
-    shaders.push_back(shader);
-    return shader;
-  } else {
-    auto shader = std::make_shared<Shader>(manifest_info["vertex_path"],
-                                           manifest_info["fragment_path"]);
-    shaders.push_back(shader);
-    return shader;
+AssetSystem::LoadAsset<Shader>(std::filesystem::path path) {
+	if (!std::filesystem::exists(path)) {
+    printf("Shader directory does not exist: %s\n", path.string().c_str());
+    return nullptr;
   }
+  // Check for directory structure
+  auto abs_path = std::filesystem::absolute(path);
+  if (!std::filesystem::exists(abs_path / "vs.glsl") ||
+      !std::filesystem::exists(abs_path / "fs.glsl")) {
+    printf("Shader directory missing vs.glsl or fs.glsl: %s\n", path.string().c_str());
+    return nullptr;
+	}
+	// Copy over the shader files to the project assets with a guid
+	auto guid = ion::uuid::GenerateUUID();
+	
+  auto shader_directory = GetProjectRoot() / guid;
+	std::filesystem::create_directory(shader_directory);
+
+	std::filesystem::copy_file(abs_path / "vs.glsl",
+    shader_directory / "vs.glsl",
+    std::filesystem::copy_options::update_existing);
+
+	std::filesystem::copy_file(abs_path / "fs.glsl",
+    shader_directory / "fs.glsl",
+    std::filesystem::copy_options::update_existing);
+
+  auto shader = std::make_shared<Shader>(shader_directory / "vs.glsl", shader_directory / "fs.glsl");
+  shaders.push_back(shader);
+  return shader;
 }
 
 template <>
-std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest) {
-	auto world = std::make_shared<World>(manifest);
+std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::filesystem::path path) {
+	auto world = std::make_shared<World>(path);
+	SetProjectRoot(path.parent_path() / "assets");
+	if (!std::filesystem::exists(path.parent_path() / "assets")) {
+		std::filesystem::create_directory(path.parent_path() / "assets");
+  }
   return world;
 }
 
 void AssetSystem::Inspector() {
   ION_GUI_PREP_CONTEXT();
   ImGui::Begin("Asset System");
-  if (ImGui::Button("Load Image from Manifest")) {
-    auto file_char = tinyfd_openFileDialog("Load Image From Manifest", nullptr,
+  if (ImGui::Button("Load Image")) {
+    auto file_char = tinyfd_openFileDialog("Load Image", nullptr,
                                            0, nullptr, nullptr, false);
     if (file_char) {
-      LoadAsset<Texture>(file_char);
+      LoadAsset<Texture>(std::filesystem::path(file_char));
     }
-		free(file_char);
-  }
-  if (ImGui::Button("Load Texture Pack from Manifest")) {
-    auto file_char = tinyfd_openFileDialog(
-        "Load Texture Pack From Manifest", nullptr, 0, nullptr, nullptr, false);
-    if (file_char) {
-      LoadAsset<TexturePack>(file_char);
-    }
-		free(file_char);
   }
   for (int i = 0; i < textures.size(); i++) {
     ImGui::PushID(i);

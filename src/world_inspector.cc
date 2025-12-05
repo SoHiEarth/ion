@@ -36,6 +36,7 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
         std::swap(world, new_world);
       }
     }
+		ImGui::SameLine();
     if (ImGui::Button("Save")) {
       auto path = tinyfd_saveFileDialog("Save World", nullptr, 0, nullptr, nullptr);
       if (path) {
@@ -122,8 +123,8 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
       }
       if (ImGui::Selectable("Renderable") && selected_entity != -1) {
         auto renderable_component = world->NewComponent<Renderable>(selected_entity);
-        renderable_component->color = defaults.default_textures->color;
-        renderable_component->normal = defaults.default_textures->normal;
+        renderable_component->color = defaults.default_color;
+        renderable_component->normal = defaults.default_normal;
         renderable_component->shader = defaults.default_shader;
         renderable_component->data = defaults.default_data;
         ImGui::CloseCurrentPopup();
