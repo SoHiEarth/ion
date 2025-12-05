@@ -4,6 +4,8 @@
 #include "game/player.h"
 #include "render.h"
 #include <map>
+#include <filesystem>
+#include <memory>
 
 using EntityID = std::uint32_t;
 const EntityID NULL_ENTITY = std::numeric_limits<EntityID>::max();
@@ -19,8 +21,11 @@ private:
   std::map<EntityID, std::shared_ptr<Light>> lights;
 	std::map<EntityID, std::shared_ptr<Script>> scripts;	
 	std::map<EntityID, std::shared_ptr<void*>> custom_components;
+	std::filesystem::path world_path;
 
 public:
+  World(std::filesystem::path path) : world_path(path) {}
+	std::filesystem::path GetWorldPath() const { return world_path; }
   std::map<EntityID, std::string>& GetMarkers();
 	// Creates a new entity and returns its ID
 	// Note: Adds a transform component after creating an entity

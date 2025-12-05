@@ -188,7 +188,7 @@ int RenderSystem::Render(std::shared_ptr<Framebuffer> color_fb, std::shared_ptr<
     auto& camera_entity_id = all_cameras.begin()->first;
     
     view = GetModelFromTransform(world->GetComponent<Transform>(camera_entity_id));
-    view = glm::translate(view, -glm::vec3{camera->position, 3.0});
+    view = glm::translate(view, glm::vec3{camera->position, -3.0});
     float ortho_scale = 10.0f;
     projection = glm::ortho(-ortho_scale * (GetWindowSize().x / GetWindowSize().y),
                             ortho_scale * (GetWindowSize().x / GetWindowSize().y),
@@ -245,7 +245,7 @@ void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
   auto &all_transforms = world->GetComponentSet<Transform>();
   for (auto &[entity_id, camera] : all_cameras) {
     glm::mat4 view = GetModelFromTransform(world->GetComponent<Transform>(entity_id));
-    view = glm::translate(view, -glm::vec3{camera->position, 3.0});
+    view = glm::translate(view, glm::vec3{camera->position, -3.0});
     float ortho_scale = 10.0f;
     auto projection = glm::ortho(-ortho_scale * (ion::GetSystem<RenderSystem>().GetWindowSize().x /
       ion::GetSystem<RenderSystem>().GetWindowSize().y),

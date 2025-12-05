@@ -16,7 +16,9 @@ find_package(Python3 COMPONENTS Development REQUIRED)
 
 add_library(ion-development STATIC
   src/development/gui.cc
- "include/game/game.h")
+  src/development/write_to_disk.cc
+  src/development/package.cc
+)
 target_compile_features(ion-development PRIVATE cxx_std_20)
 #target_compile_definitions(ion-development PRIVATE ION_EXPORTS)
 set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
@@ -58,7 +60,8 @@ target_link_libraries(ion-base PUBLIC
 
 add_library(ion-game STATIC
   src/game/game.cc
-  src/game/player.cc)
+  src/game/player.cc
+)
 target_compile_features(ion-game PRIVATE cxx_std_20)
 #target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
 set_target_properties(ion-game PROPERTIES VERSION ${PROJECT_VERSION})

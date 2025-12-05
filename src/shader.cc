@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <filesystem>
 
 void Shader::Use() { glUseProgram(program); }
 unsigned int Shader::GetProgram() { return program; }
@@ -47,12 +48,12 @@ int Shader::SetUniform<glm::mat4>(std::string_view name, glm::mat4 value) {
   return 0;
 }
 
-std::string _ShaderInternalReadFile(std::string_view path) {
+std::string _ShaderInternalReadFile(std::filesystem::path path) {
   std::string data{};
   std::ifstream file{};
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   try {
-    file.open(path.data());
+    file.open(path);
     std::stringstream stream;
     stream << file.rdbuf();
     file.close();
@@ -63,7 +64,7 @@ std::string _ShaderInternalReadFile(std::string_view path) {
   return data;
 }
 
-Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
+Shader::Shader(std::filesystem::path vertex_path, std::filesystem::path fragment_path) {
   unsigned int vertex, fragment;
   int success;
   std::array<char, OPENGL_LOG_SIZE> info_log;
@@ -78,7 +79,7 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertex, info_log.size(), nullptr, info_log.data());
-    printf("Error while compiling vertex shader %s\n", vertex_path.data());
+    printf("Error while compiling vertex shader %ls\n", vertex_path.c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", VERTEX_COMPILATION_FAIL);
   }
@@ -87,7 +88,7 @@ Shader::Shader(std::string_view vertex_path, std::string_view fragment_path) {
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragment, 512, nullptr, info_log.data());
-		printf("Error while compiling fragment shader %s\n", fragment_path.data());
+		printf("Error while compiling fragment shader %ls\n", fragment_path.c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", FRAGMENT_COMPILATION_FAIL);
   }

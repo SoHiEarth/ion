@@ -7,9 +7,54 @@
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include "context.h"
+#include "development/write_to_disk.h"
+#include "development/package.h"
+#include <tinyfiledialogs/tinyfiledialogs.h>
 
 void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
   ImGui::Begin("World");
+  static std::map<int, std::filesystem::path> all_worlds;
+  if (ImGui::CollapsingHeader("IO", ImGuiTreeNodeFlags_DefaultOpen)) {
+    // All worlds in project
+    if (ImGui::CollapsingHeader("All Worlds", ImGuiTreeNodeFlags_DefaultOpen)) {
+      bool current_world_found = false;
+      for (auto& [index, path] : all_worlds) {
+        if (path == world->GetWorldPath()) current_world_found = true;
+        auto path_str = path.string();
+        if (ImGui::InputText(std::format("{}", index).c_str(), &path_str)) {
+          path = path_str;
+        }
+      }
+      if (!current_world_found) {
+        all_worlds.insert({ static_cast<int>(all_worlds.size()), world->GetWorldPath() });
+      }
+    }
+    if (ImGui::Button("Load")) {
+      auto path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
+      if (path) {
+        auto new_world = ion::GetSystem<AssetSystem>().LoadAsset<World>(path);
+        std::swap(world, new_world);
+      }
+    }
+    if (ImGui::Button("Save")) {
+      auto path = tinyfd_saveFileDialog("Save World", nullptr, 0, nullptr, nullptr);
+      if (path) {
+        ion::dev::Writer::WriteToDisk(path, world);
+      }
+		}
+    ImGui::SameLine();
+    if (ImGui::Button("Package & Ship")) {
+      auto path = tinyfd_selectFolderDialog("Select Output Directory", nullptr);
+      if (path) {
+        auto package_data = ion::dev::PackageData{
+          {},
+          path
+        };
+        ion::dev::Packer::CreatePackaged(package_data);
+      }
+    }
+  }
+
   if (ImGui::CollapsingHeader("Render Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
     auto render_scale = ion::GetSystem<RenderSystem>().GetRenderScale();
     if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
@@ -106,6 +151,10 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
   for (auto& [id, transform] : transforms) {
     ImGui::PushID(id);
     if (ImGui::CollapsingHeader(std::format("Entity {}", id).c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (world->GetMarkers().contains(id)) {
+				ImGui::InputText("Marker", &world->GetMarkers()[id]);
+      }
+
       if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::DragFloat2("Position", glm::value_ptr(transform->position), 0.1f);
         ImGui::DragInt("Layer", &transform->layer, 1.0F, 0, 100);

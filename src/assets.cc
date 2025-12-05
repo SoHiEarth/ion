@@ -112,7 +112,7 @@ AssetSystem::LoadAsset<Shader>(std::string_view manifest) {
 
 template <>
 std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::string_view manifest) {
-	auto world = std::make_shared<World>();
+	auto world = std::make_shared<World>(manifest);
   return world;
 }
 
