@@ -1,7 +1,7 @@
 #pragma once
 #include "component.h"
 #include "gpu_data.h"
-#include <GLFW/glfw3.h>
+//#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
@@ -52,6 +52,8 @@ enum RenderPass {
   RENDER_PASS_COLOR,
   RENDER_PASS_NORMAL
 };
+
+struct GLFWwindow;
 
 class ION_API RenderSystem {
 private:

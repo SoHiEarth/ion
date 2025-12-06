@@ -18,7 +18,6 @@
     "opengl",
     "python3",
     "stb",
-    "tinyfiledialogs",
-    "vcpkg-get-python"
+    "tinyfiledialogs"
   ]
 }

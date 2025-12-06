@@ -32,21 +32,25 @@ target_link_libraries(ion-development PUBLIC
 )
 
 add_library(ion-base STATIC
-  src/assets.cc
-  src/context.cc
-  src/shader.cc
-  src/script.cc
-  src/render.cc
-  src/texture.cc
-  src/physics.cc
-  src/world.cc
-  src/world_inspector.cc
+  src/base/assets.cc
+  src/base/context.cc
+  src/base/shader.cc
+  src/base/script.cc
+  src/base/render.cc
+  src/base/texture.cc
+  src/base/physics.cc
+  src/base/world.cc
+  src/base/world_inspector.cc
 )
 target_compile_features(ion-base PRIVATE cxx_std_20)
 #target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION})
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION_MAJOR})
 target_include_directories(ion-base PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_precompile_headers(ion-base PRIVATE
+  include/world.h
+)
+
 target_link_libraries(ion-base PUBLIC
     box2d::box2d
     glad::glad
@@ -76,7 +80,7 @@ add_executable(ion)
 target_compile_features(ion PRIVATE cxx_std_20)
 #target_compile_definitions(ion PRIVATE ION_IMPORTS)
 target_sources(ion PRIVATE
-  src/main.cc
+  src/base/main.cc
 )
 set_target_properties(ion PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
@@ -92,7 +96,7 @@ add_executable(ion-run)
 target_compile_features(ion-run PRIVATE cxx_std_20)
 #target_compile_definitions(ion-run PRIVATE ION_IMPORTS)
 target_sources(ion-run PRIVATE
-  src/run/main.cc
+  src/run/runner.cc
 )
 set_target_properties(ion-run PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(ion-run PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})

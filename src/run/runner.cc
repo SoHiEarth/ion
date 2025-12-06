@@ -1,4 +1,5 @@
 #include <context.h>
+#include <GLFW/glfw3.h>
 #include "development/package.h"
 #include <fstream>
 #include <sstream>
