@@ -14,6 +14,8 @@ class ION_API AssetSystem {
   std::map<std::string, std::shared_ptr<Shader>> shaders;
 	std::filesystem::path project_root;
 public:
+  bool CheckApplicationStructure();
+
   void SetProjectRoot(std::filesystem::path path) {
 		project_root = path;
   }

@@ -35,7 +35,11 @@ std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
 
 int main(int argc, char **argv) {
-	auto world_path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
+	if (!ion::GetSystem<AssetSystem>().CheckApplicationStructure()) {
+    printf("Invalid application structure. Exiting.\n");
+    return -1;
+	}
+  auto world_path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
   if (!world_path) {
     tinyfd_messageBox("Error", "No world selected. Exiting.", "ok", "error", 1);
     return -1;
@@ -179,7 +183,6 @@ int main(int argc, char **argv) {
     ion::GetSystem<RenderSystem>().Render(color_buffer, normal_buffer, screen_data, deferred_shader, world);
     ion::GetSystem<RenderSystem>().UnbindFramebuffer();
 
-    // Bloom
     if (bloom_enable) {
       ion::GetSystem<RenderSystem>().BindFramebuffer(bloom_buffer);
       ion::GetSystem<RenderSystem>().Clear();

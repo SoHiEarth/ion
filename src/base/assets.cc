@@ -13,6 +13,32 @@
 #include "development/id.h"
 #include "stb_image.h"
 
+bool VerifyPathExists(const std::filesystem::path& path) {
+  return std::filesystem::exists(path);
+}
+
+bool AssetSystem::CheckApplicationStructure() {
+  if (!VerifyPathExists("assets")) {
+    printf("Assets directory does not exist, locate it? (y/n)");
+		auto response = getchar();
+    if (response == 'y') {
+      auto dir = tinyfd_selectFolderDialog("Select Assets Directory", nullptr);
+      if (dir) {
+        std::filesystem::create_directory("assets");
+        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+          std::filesystem::copy(entry.path(), "assets" / entry.path().filename(), std::filesystem::copy_options::recursive | std::filesystem::copy_options::update_existing);
+        }
+      } else {
+        return false;
+      }
+    }
+    else {
+      return false;
+		}
+  }
+  return true;
+}
+
 template <>
 std::shared_ptr<Texture>
 AssetSystem::LoadAsset<Texture>(std::filesystem::path path) {

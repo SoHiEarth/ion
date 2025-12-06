@@ -52,6 +52,10 @@ std::map<int, std::filesystem::path> ReadWorldList() {
 }
 
 int main() {
+  if (!ion::GetSystem<AssetSystem>().CheckApplicationStructure()) {
+    printf("Invalid application structure. Exiting.\n");
+    return -1;
+  }
 	// Read file in world_list.cfg
 	auto world_list = ReadWorldList();
 	printf("Loaded world list with %zu worlds.\n", world_list.size());
