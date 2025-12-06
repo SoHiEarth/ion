@@ -64,14 +64,15 @@ std::string _ShaderInternalReadFile(std::filesystem::path path) {
   return data;
 }
 
-Shader::Shader(std::filesystem::path vertex_path, std::filesystem::path fragment_path) {
+Shader::Shader(std::filesystem::path path, std::string_view new_id) {
+	id = std::string(new_id);
   unsigned int vertex, fragment;
   int success;
   std::array<char, OPENGL_LOG_SIZE> info_log;
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  auto vertex_code = _ShaderInternalReadFile(vertex_path),
-       fragment_code = _ShaderInternalReadFile(fragment_path);
+  auto vertex_code = _ShaderInternalReadFile(path / "vs.glsl"),
+       fragment_code = _ShaderInternalReadFile(path / "fs.glsl");
   auto vertex_code_char = vertex_code.c_str(),
        fragment_code_char = fragment_code.c_str();
   glShaderSource(vertex, 1, &vertex_code_char, nullptr);
@@ -79,7 +80,7 @@ Shader::Shader(std::filesystem::path vertex_path, std::filesystem::path fragment
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertex, info_log.size(), nullptr, info_log.data());
-    printf("Error while compiling vertex shader %ls\n", vertex_path.c_str());
+    printf("Error while compiling vertex shader %ls\n", (path / "vs.glsl").c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", VERTEX_COMPILATION_FAIL);
   }
@@ -88,7 +89,7 @@ Shader::Shader(std::filesystem::path vertex_path, std::filesystem::path fragment
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragment, 512, nullptr, info_log.data());
-		printf("Error while compiling fragment shader %ls\n", fragment_path.c_str());
+		printf("Error while compiling fragment shader %ls\n", (path / "fs.glsl").c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", FRAGMENT_COMPILATION_FAIL);
   }

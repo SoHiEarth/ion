@@ -10,10 +10,12 @@ find_package(OpenGL REQUIRED)
 find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Development REQUIRED)
+find_package(pugixml CONFIG REQUIRED)
 
 add_library(ion-base SHARED)
 target_compile_features(ion-base PRIVATE cxx_std_20)
 target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
+target_compile_definitions(ion-base PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-base PRIVATE
   src/base/assets.cc
   src/base/context.cc
@@ -36,11 +38,13 @@ target_link_libraries(ion-base PUBLIC
     OpenGL::GL
     tinyfiledialogs::tinyfiledialogs
     Python3::Python
+    pugixml::pugixml
 )
 
 add_library(ion-game STATIC)
 target_compile_features(ion-game PRIVATE cxx_std_20)
 #target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
+target_compile_definitions(ion-game PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-game PRIVATE
   src/game/game.cc
 )
@@ -60,6 +64,7 @@ target_sources(ion-development PRIVATE
   src/development/inspector.cc
   src/development/main.cc
 )
+target_compile_definitions(ion-development PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
 target_include_directories(ion-development PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ion-development PUBLIC
@@ -73,6 +78,7 @@ target_compile_features(ion-run PRIVATE cxx_std_20)
 target_sources(ion-run PRIVATE
   src/run/runner.cc
 )
+target_compile_definitions(ion-run PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 set_target_properties(ion-run PROPERTIES VERSION ${PROJECT_VERSION})
 target_include_directories(ion-run PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ion-run PRIVATE

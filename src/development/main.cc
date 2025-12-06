@@ -39,16 +39,16 @@ int main(int argc, char **argv) {
     printf("Invalid application structure. Exiting.\n");
     return -1;
 	}
+  ion::GetSystem<RenderSystem>().Init();
+  ion::gui::Init(ion::GetSystem<RenderSystem>().GetWindow());
+  ion::GetSystem<PhysicsSystem>().Init();
+  ion::GetSystem<ScriptSystem>().Init();
   auto world_path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
   if (!world_path) {
     tinyfd_messageBox("Error", "No world selected. Exiting.", "ok", "error", 1);
     return -1;
   }
   auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world_path);
-  ion::GetSystem<RenderSystem>().Init();
-  ion::gui::Init(ion::GetSystem<RenderSystem>().GetWindow());
-  ion::GetSystem<PhysicsSystem>().Init();
-  ion::GetSystem<ScriptSystem>().Init();
 
   AttributePointer position_pointer {
     .size = 3,
@@ -111,17 +111,17 @@ int main(int argc, char **argv) {
 	auto tonemap_buffer = ion::GetSystem<RenderSystem>().CreateFramebuffer(framebuffer_info);
   auto& final_framebuffer = shaded;
 
-  auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader");
-  auto screen_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/screen_shader");
-  auto bloom_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_shader");
-  auto bloom_blur_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_blur_shader");
-  auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader");
-  auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader");
+  auto deferred_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/deferred_shader", false);
+  auto screen_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/screen_shader", false);
+  auto bloom_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_shader", false);
+  auto bloom_blur_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_blur_shader", false);
+  auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader", false);
+  auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader", false);
 
   auto defaults = Defaults{
-    .default_color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/color.png"),
-    .default_normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/normal.png"),
-    .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader"),
+    .default_color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/color.png", false),
+    .default_normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/normal.png", false),
+    .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader", false),
     .default_data = ion::GetSystem<RenderSystem>().CreateData(data_desc)
 	};
 
@@ -133,13 +133,6 @@ int main(int argc, char **argv) {
   renderable->normal = defaults.default_normal;
 	renderable->shader = defaults.default_shader;
 	renderable->data = defaults.default_data;
-
-  auto light_entity = world->CreateEntity();
-	auto light = world->NewComponent<Light>(light_entity);
-	light->type = LightType::GLOBAL;
-	light->intensity = 1.0f;
-	light->radial_falloff = 1.0f;
-	light->color = glm::vec3(1.0f, 1.0f, 1.0f);
 
   while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {
     glfwPollEvents();

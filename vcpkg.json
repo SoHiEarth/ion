@@ -17,6 +17,7 @@
     },
     "opengl",
     "python3",
+    "pugixml",
     "stb",
     "tinyfiledialogs"
   ]

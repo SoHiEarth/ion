@@ -1,15 +1,13 @@
 #pragma once
 #include <memory>
+#include <string>
+#include <filesystem>
 
 struct Texture {
+  std::string id;
 public:
   unsigned int texture = 0;
-  void Use();
-};
-
-struct TexturePack {
-public:
-  std::shared_ptr<Texture> color;
-  std::shared_ptr<Texture> normal;
+	Texture(std::string_view new_id) : id(new_id) {}
+	std::string GetID() const { return id; }
   void Use();
 };

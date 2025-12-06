@@ -24,7 +24,7 @@ public:
   }
 
   template <typename T>
-	std::shared_ptr<T> LoadAsset(std::filesystem::path path);
+	std::shared_ptr<T> LoadAsset(std::filesystem::path path, bool is_hash = true);
   template <typename T> void DestroyAsset(std::shared_ptr<T> asset);
   std::map<std::string, std::shared_ptr<Texture>>& GetTextures() {
     return textures;
