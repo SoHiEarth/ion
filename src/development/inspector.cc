@@ -1,14 +1,14 @@
-#include "world_inspector.h"
-#include "assets.h"
-#include "texture.h"
-#include "world.h"
-#include "development/gui.h"
+#include "ion/development/inspector.h"
+#include "ion/assets.h"
+#include "ion/texture.h"
+#include "ion/world.h"
+#include "ion/development/gui.h"
 #include <imgui_stdlib.h>
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
-#include "context.h"
-#include "development/write_to_disk.h"
-#include "development/package.h"
+#include "ion/context.h"
+#include "ion/development/write_to_disk.h"
+#include "ion/development/package.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
 
 void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
@@ -248,6 +248,28 @@ void WorldInspector(std::shared_ptr<World> world, Defaults& defaults) {
     }
     ImGui::PopID();
     ImGui::Separator();
+  }
+  ImGui::End();
+}
+
+void AssetInspector() {
+  ION_GUI_PREP_CONTEXT();
+  ImGui::Begin("Asset System");
+  if (ImGui::Button("Load Image")) {
+    auto file_char = tinyfd_openFileDialog("Load Image", nullptr,
+      0, nullptr, nullptr, false);
+    if (file_char) {
+      ion::GetSystem<AssetSystem>().LoadAsset<Texture>(std::filesystem::path(file_char));
+    }
+  }
+  for (const auto& [id, texture] : ion::GetSystem<AssetSystem>().GetTextures()) {
+    ImGui::PushID(id.c_str());
+    ImGui::Image(ion::GetSystem<AssetSystem>().GetTextures().at(id)->texture, ImVec2(100, 100));
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+      ImGui::SetDragDropPayload("TEXTURE_ASSET", &ion::GetSystem<AssetSystem>().GetTextures().at(id), sizeof(std::shared_ptr<Texture>&));
+      ImGui::EndDragDropSource();
+    }
+    ImGui::PopID();
   }
   ImGui::End();
 }

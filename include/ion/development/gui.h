@@ -4,7 +4,7 @@
 #include <imgui_stdlib.h>
 #include <functional>
 #include <memory>
-#include "exports.h"
+#include "ion/exports.h"
 #define ION_GUI_PREP_CONTEXT() ImGui::SetCurrentContext(ion::gui::GetContext());
 
 namespace ion {

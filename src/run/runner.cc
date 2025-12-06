@@ -1,16 +1,16 @@
-#include <context.h>
+#include "ion/context.h"
 #include <GLFW/glfw3.h>
-#include "development/package.h"
+#include "ion/development/package.h"
 #include <fstream>
 #include <sstream>
-#include "assets.h"
-#include "physics.h"
-#include "render.h"
-#include "script.h"
-#include "defaults.h"
-#include "texture.h"
-#include "shader.h"
-#include "game/game.h"
+#include "ion/assets.h"
+#include "ion/physics.h"
+#include "ion/render.h"
+#include "ion/script.h"
+#include "ion/defaults.h"
+#include "ion/texture.h"
+#include "ion/shader.h"
+#include "ion/game/game.h"
 
 std::vector<float> vertices = {
    0.5f,  0.5f,  0.0f,  1.0f,  0.0f,

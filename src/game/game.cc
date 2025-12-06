@@ -1,7 +1,7 @@
-#include "game/game.h"
+#include "ion/game/game.h"
 #include <GLFW/glfw3.h>
-#include "context.h"
-#include "render.h"
+#include "ion/context.h"
+#include "ion/render.h"
 
 void GameSystem::Update(std::shared_ptr<World>& world) {
 	for (auto& [entity, marker] : world->GetMarkers()) {

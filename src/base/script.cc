@@ -1,4 +1,4 @@
-#include "script.h"
+#include "ion/script.h"
 #include <filesystem>
 
 bool CheckPythonExists() {

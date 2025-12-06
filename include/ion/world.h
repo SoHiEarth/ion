@@ -1,7 +1,6 @@
 #pragma once
 
 #include "component.h"
-#include "game/player.h"
 #include "render.h"
 #include <map>
 #include <filesystem>

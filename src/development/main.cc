@@ -1,20 +1,20 @@
-#include "assets.h"
-#include "context.h"
-#include "physics.h"
-#include "texture.h"
-#include "render.h"
-#include "world.h"
-#include "script.h"
+#include "ion/assets.h"
+#include "ion/context.h"
+#include "ion/physics.h"
+#include "ion/texture.h"
+#include "ion/render.h"
+#include "ion/world.h"
+#include "ion/script.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <vector>
 #include <format>
-#include "shader.h"
-#include "world_inspector.h"
-#include "development/gui.h"
-#include "game/game.h"
+#include "ion/shader.h"
+#include "ion/development/inspector.h"
+#include "ion/development/gui.h"
+#include "ion/game/game.h"
 
 std::vector<float> vertices = {
    0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
@@ -147,7 +147,6 @@ int main(int argc, char **argv) {
     ion::GetSystem<ScriptSystem>().Update(world);
     ion::GetSystem<PhysicsSystem>().Update();
 		game_system.Update(world);
-    ion::GetSystem<AssetSystem>().Inspector();
 
     ION_GUI_PREP_CONTEXT();
     {
@@ -159,10 +158,6 @@ int main(int argc, char **argv) {
           ImVec2(200, 200), ImVec2(0, 1), ImVec2(1, 0));
         ImGui::SameLine();
         ImGui::TextUnformatted(name.c_str());
-        ImGui::SameLine();
-				if (ImGui::Button("Set as Final")) {
-          final_framebuffer = buffer;
-        }
         ImGui::PopID();
       }
 
@@ -170,6 +165,7 @@ int main(int argc, char **argv) {
     }
 
     WorldInspector(world, defaults);
+    AssetInspector();
     
     ion::GetSystem<RenderSystem>().BindFramebuffer(color_buffer);
     ion::GetSystem<RenderSystem>().Clear();

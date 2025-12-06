@@ -1,6 +1,6 @@
 #define OPENGL_LOG_SIZE 512
-#include "shader.h"
-#include "error_code.h"
+#include "ion/shader.h"
+#include "ion/error_code.h"
 #include <array>
 #include <fstream>
 #include <glad/glad.h>

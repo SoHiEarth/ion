@@ -32,6 +32,4 @@ public:
   std::map<std::string, std::shared_ptr<Shader>>& GetShaders() {
     return shaders;
   }
-
-  void Inspector();
 };

@@ -1,16 +1,16 @@
-#include "assets.h"
-#include "context.h"
-#include "shader.h"
-#include "texture.h"
+#include "ion/assets.h"
+#include "ion/context.h"
+#include "ion/shader.h"
+#include "ion/texture.h"
 #include <filesystem>
 #include <fstream>
 #include <imgui.h>
-#include "development/gui.h"
+#include "ion/development/gui.h"
 #include <map>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "render.h"
-#include "development/id.h"
+#include "ion/render.h"
+#include "ion/development/id.h"
 #include "stb_image.h"
 
 bool VerifyPathExists(const std::filesystem::path& path) {
@@ -107,26 +107,4 @@ std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::filesystem::path path)
 		std::filesystem::create_directory(path.parent_path() / "assets");
   }
   return world;
-}
-
-void AssetSystem::Inspector() {
-  ION_GUI_PREP_CONTEXT();
-  ImGui::Begin("Asset System");
-  if (ImGui::Button("Load Image")) {
-    auto file_char = tinyfd_openFileDialog("Load Image", nullptr,
-                                           0, nullptr, nullptr, false);
-    if (file_char) {
-      LoadAsset<Texture>(std::filesystem::path(file_char));
-    }
-  }
-  for (const auto& [id, texture] : textures) {
-    ImGui::PushID(id.c_str());
-    ImGui::Image(textures.at(id)->texture, ImVec2(100, 100));
-    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("TEXTURE_ASSET", &textures.at(id), sizeof(std::shared_ptr<Texture>&));
-      ImGui::EndDragDropSource();
-    }
-    ImGui::PopID();
-  }
-  ImGui::End();
 }
