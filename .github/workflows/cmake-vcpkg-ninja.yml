@@ -27,6 +27,14 @@ jobs:
         restore-keys: |
           vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
           vcpkg-${{ runner.os }}-
+    - name: Cache vcpkg_installed
+      uses: actions/cache@v4
+      with:
+        path: D:/a/ion/ion/vcpkg_installed
+        key: vcpkg_installed-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ github.run_id }}
+        restore-keys: |
+          vcpkg_installed-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
+          vcpkg_installed-${{ runner.os }}-
 
     - uses: lukka/get-cmake@latest
     
