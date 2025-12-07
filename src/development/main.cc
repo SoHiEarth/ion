@@ -81,8 +81,7 @@ int main() {
       ion::physics::Update();
       game_system.Update(world);
       SettingsInspector(pipeline_settings);
-      WorldInspector(world, defaults);
-      AssetInspector(world);
+      ion::dev::ui::RenderInspector(world, defaults);
       pipeline.Render(world, pipeline_settings);
       ion::gui::Render();
       ion::render::Present();

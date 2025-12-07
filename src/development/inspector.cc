@@ -11,6 +11,11 @@
 #include "ion/development/id.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
 
+namespace ion::dev::ui::internal {
+  bool render_settings_open = false;
+  bool asset_inspector_open = false;
+}
+
 std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   std::vector<std::string> tokens;
   std::string token;
@@ -21,11 +26,30 @@ std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   return tokens;
 }
 
+void MainMenuBar() {
+  ImGui::BeginMainMenuBar();
+  if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("Exit")) {
+			glfwSetWindowShouldClose(ion::render::GetWindow(), GLFW_TRUE);
+    }
+		ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("View")) {
+    if (ImGui::MenuItem("Render Settings")) {
+      ion::dev::ui::internal::render_settings_open = true;
+    }
+    if (ImGui::MenuItem("Asset Inspector")) {
+      ion::dev::ui::internal::asset_inspector_open = true;
+		}
+		ImGui::EndMenu();
+  }
+  ImGui::EndMainMenuBar();
+}
+
 void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   ImGui::Begin("World");
   static std::map<int, std::filesystem::path> all_worlds;
   if (ImGui::CollapsingHeader("IO", ImGuiTreeNodeFlags_DefaultOpen)) {
-    // All worlds in project
     if (ImGui::CollapsingHeader("All Worlds", ImGuiTreeNodeFlags_DefaultOpen)) {
       bool current_world_found = false;
       for (auto& [index, path] : all_worlds) {
@@ -65,17 +89,6 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
       }
     }
   }
-
-  if (ImGui::CollapsingHeader("Render Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-    auto render_scale = ion::render::GetRenderScale();
-    if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
-      ion::render::SetRenderScale(render_scale);
-    }
-		auto clear_color = ion::render::GetClearColor();
-    if (ImGui::ColorEdit3("Clear Color", glm::value_ptr(clear_color), 0.01f)) {
-      ion::render::SetClearColor(clear_color);
-		}
-	}
 
   if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::Button("Create Entity")) {
@@ -292,14 +305,13 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
 }
 
 void AssetInspector(std::shared_ptr<World>& world) {
-  ION_GUI_PREP_CONTEXT();
   ImGui::Begin("Asset System");
 	ImGui::SeparatorText("Textures");
   if (ImGui::Button("Load Image")) {
     auto file_char = tinyfd_openFileDialog("Load Image", nullptr,
       0, nullptr, nullptr, true);
     if (file_char) {
-			for (auto file : SplitString(file_char, '|')) {
+			for (auto& file : SplitString(file_char, '|')) {
         ion::res::LoadAsset<Texture>(std::string(file), false);
       }
     }
@@ -368,4 +380,29 @@ void AssetInspector(std::shared_ptr<World>& world) {
     }
   }
   ImGui::End();
+}
+
+void RenderSettingInspector() {
+  ImGui::Begin("Render Settings");
+  auto render_scale = ion::render::GetRenderScale();
+  if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
+    ion::render::SetRenderScale(render_scale);
+  }
+  auto clear_color = ion::render::GetClearColor();
+  if (ImGui::ColorEdit3("Clear Color", glm::value_ptr(clear_color), 0.01f)) {
+    ion::render::SetClearColor(clear_color);
+  }
+  ImGui::End();
+}
+
+void ion::dev::ui::RenderInspector(std::shared_ptr<World>& world, Defaults& defaults) {
+  ION_GUI_PREP_CONTEXT();
+  MainMenuBar();
+  WorldInspector(world, defaults);
+  if (internal::asset_inspector_open) {
+    AssetInspector(world);
+  }
+  if (internal::render_settings_open) {
+    RenderSettingInspector();
+  }
 }
