@@ -1,7 +1,6 @@
 #include "ion/development/startwindow.h"
 #include "ion/development/gui.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
-#include "ion/context.h"
 #include "ion/render.h"
 #include "ion/assets.h"
 
@@ -9,9 +8,9 @@ std::shared_ptr<World> ion::gui::StartWindow() {
   ION_GUI_PREP_CONTEXT();
   auto func = ion::gui::STARTWINDOW_LATEFUNC::UNSPECIFIED;
   char* path;
-  while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {
+  while (!glfwWindowShouldClose(ion::render::GetWindow())) {
     glfwPollEvents();
-		ion::GetSystem<RenderSystem>().Clear();
+		ion::render::Clear();
     ion::gui::NewFrame();
     ImGui::Begin("Start", NULL, ImGuiWindowFlags_NoDecoration);
     if (ImGui::Button("New World")) {
@@ -22,12 +21,12 @@ std::shared_ptr<World> ion::gui::StartWindow() {
     }
     ImGui::End();
     ion::gui::Render();
-    ion::GetSystem<RenderSystem>().Present();
+    ion::render::Present();
     switch (func) {
     case ion::gui::STARTWINDOW_LATEFUNC::NEW_WORLD_DIALOG:
       path = tinyfd_saveFileDialog("New World", nullptr, 0, nullptr, nullptr);
       if (path) {
-        return ion::GetSystem<AssetSystem>().CreateAsset<World>(path);
+        return ion::res::CreateAsset<World>(path);
       }
       else {
         func = ion::gui::STARTWINDOW_LATEFUNC::UNSPECIFIED;
@@ -36,7 +35,7 @@ std::shared_ptr<World> ion::gui::StartWindow() {
     case ion::gui::STARTWINDOW_LATEFUNC::OPEN_WORLD_DIALOG:
       path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
       if (path) {
-        return ion::GetSystem<AssetSystem>().LoadAsset<World>(path, false);
+        return ion::res::LoadAsset<World>(path, false);
       }
       else {
         func = ion::gui::STARTWINDOW_LATEFUNC::UNSPECIFIED;
@@ -46,5 +45,5 @@ std::shared_ptr<World> ion::gui::StartWindow() {
       break;
     }
   }
-  throw ion::gui::STARTWINDOW_EXCEPTION::CANCELLED;
+  throw std::runtime_error("Canceled Operation.");
 }

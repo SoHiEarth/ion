@@ -40,12 +40,12 @@ enum RenderPass {
 
 struct GLFWwindow;
 
-class ION_API RenderSystem {
-private:
-  GLFWwindow *window;
-  std::map<std::shared_ptr<Framebuffer>, std::string> framebuffers;
+namespace ion::render {
+  namespace internal {
+    ION_API extern GLFWwindow* window;
+    ION_API extern std::map<std::shared_ptr<Framebuffer>, std::string> framebuffers;
+  }
 
-public:
   int Init();
   GLFWwindow *GetWindow();
   glm::vec2 GetWindowSize();
@@ -61,21 +61,22 @@ public:
 
   unsigned int ConfigureTexture(const TextureInfo& texture_info);
   
-  std::shared_ptr<Framebuffer> CreateFramebuffer(FramebufferInfo&);
+  std::shared_ptr<Framebuffer> CreateFramebuffer(const FramebufferInfo&);
   void UpdateFramebuffers();
   void BindFramebuffer(std::shared_ptr<Framebuffer>);
   void UnbindFramebuffer();
   void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>, std::shared_ptr<GPUData> quad);
-	const std::map<std::shared_ptr<Framebuffer>, std::string>& GetFramebuffers() const { return framebuffers; }
+  const std::map<std::shared_ptr<Framebuffer>, std::string>& GetFramebuffers();
 
 	void BindTexture(std::shared_ptr<Texture> texture, int slot);
   void BindTexture(std::shared_ptr<Framebuffer> framebuffer, int slot);
 
   void UseShader(std::shared_ptr<Shader> shader);
-	void RunPass(std::shared_ptr<Framebuffer> in, std::shared_ptr<Framebuffer> out, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
+  void DestroyShader(std::shared_ptr<Shader>);
 
   void DrawWorld(std::shared_ptr<World>, RenderPass);
-  void DestroyShader(std::shared_ptr<Shader>);
+  void RunPass(std::shared_ptr<Framebuffer> in, std::shared_ptr<Framebuffer> out, std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
+  
   void Clear();
   void Clear(glm::vec4);
   int Render(std::shared_ptr<Framebuffer> color, std::shared_ptr<Framebuffer> normal, std::shared_ptr<GPUData> data, std::shared_ptr<Shader> shader, std::shared_ptr<World> world);

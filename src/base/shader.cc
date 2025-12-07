@@ -59,13 +59,12 @@ std::string _ShaderInternalReadFile(std::filesystem::path path) {
     file.close();
     data = stream.str();
   } catch (std::ifstream::failure e) {
-    printf("%d\n", FILE_READ_FAIL);
+    printf("File read fail: %s, %d\n", path.string().c_str(), FILE_READ_FAIL);
   }
   return data;
 }
 
-Shader::Shader(std::filesystem::path path, std::string_view new_id) {
-	id = std::string(new_id);
+Shader::Shader(std::filesystem::path new_path, std::string_view new_id) : path(new_path), id(new_id) {
   unsigned int vertex, fragment;
   int success;
   std::array<char, OPENGL_LOG_SIZE> info_log;

@@ -6,10 +6,20 @@
 #include <imgui_stdlib.h>
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
-#include "ion/context.h"
 #include "ion/shader.h"
 #include "ion/development/package.h"
+#include "ion/development/id.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
+
+std::vector<std::string> SplitString(const std::string& str, char delimiter) {
+  std::vector<std::string> tokens;
+  std::string token;
+  std::istringstream tokenStream(str);
+  while (std::getline(tokenStream, token, delimiter)) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
 
 void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   ImGui::Begin("World");
@@ -32,7 +42,7 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
     if (ImGui::Button("Load")) {
       auto path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
       if (path) {
-        auto new_world = ion::GetSystem<AssetSystem>().LoadAsset<World>(path);
+        auto new_world = ion::res::LoadAsset<World>(path, false);
         std::swap(world, new_world);
       }
     }
@@ -40,7 +50,7 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
     if (ImGui::Button("Save")) {
       auto path = tinyfd_saveFileDialog("Save World", nullptr, 0, nullptr, nullptr);
       if (path) {
-				ion::GetSystem<AssetSystem>().SaveAsset(path, world);
+				ion::res::SaveAsset(path, world);
       }
 		}
     ImGui::SameLine();
@@ -57,13 +67,13 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   }
 
   if (ImGui::CollapsingHeader("Render Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-    auto render_scale = ion::GetSystem<RenderSystem>().GetRenderScale();
+    auto render_scale = ion::render::GetRenderScale();
     if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
-      ion::GetSystem<RenderSystem>().SetRenderScale(render_scale);
+      ion::render::SetRenderScale(render_scale);
     }
-		auto clear_color = ion::GetSystem<RenderSystem>().GetClearColor();
+		auto clear_color = ion::render::GetClearColor();
     if (ImGui::ColorEdit3("Clear Color", glm::value_ptr(clear_color), 0.01f)) {
-      ion::GetSystem<RenderSystem>().SetClearColor(clear_color);
+      ion::render::SetClearColor(clear_color);
 		}
 	}
 
@@ -281,22 +291,29 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   ImGui::End();
 }
 
-void AssetInspector() {
+void AssetInspector(std::shared_ptr<World>& world) {
   ION_GUI_PREP_CONTEXT();
   ImGui::Begin("Asset System");
 	ImGui::SeparatorText("Textures");
   if (ImGui::Button("Load Image")) {
     auto file_char = tinyfd_openFileDialog("Load Image", nullptr,
-      0, nullptr, nullptr, false);
+      0, nullptr, nullptr, true);
     if (file_char) {
-      ion::GetSystem<AssetSystem>().LoadAsset<Texture>(std::filesystem::path(file_char), false);
+			for (auto file : SplitString(file_char, '|')) {
+        ion::res::LoadAsset<Texture>(std::string(file), false);
+      }
     }
   }
-  for (const auto& [id, texture] : ion::GetSystem<AssetSystem>().GetTextures()) {
+  for (const auto& [id, texture] : ion::res::GetTextures()) {
     ImGui::PushID(id.c_str());
-    ImGui::Image(ion::GetSystem<AssetSystem>().GetTextures().at(id)->texture, ImVec2(100, 100));
+    ImGui::Image(ion::res::GetTextures().at(id)->texture, ImVec2(100, 100));
+		if (ImGui::IsItemHovered()) {
+      ImGui::BeginTooltip();
+			ImGui::Text("Path: %s", texture->GetPath().string().c_str());
+      ImGui::EndTooltip();
+		}
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("TEXTURE_ASSET", &ion::GetSystem<AssetSystem>().GetTextures().at(id), sizeof(std::shared_ptr<Texture>&));
+      ImGui::SetDragDropPayload("TEXTURE_ASSET", &ion::res::GetTextures().at(id), sizeof(std::shared_ptr<Texture>&));
       ImGui::EndDragDropSource();
     }
     ImGui::PopID();
@@ -306,13 +323,18 @@ void AssetInspector() {
     auto file_char = tinyfd_openFileDialog("Load Shader", nullptr,
       0, nullptr, nullptr, false);
     if (file_char) {
-      ion::GetSystem<AssetSystem>().LoadAsset<Shader>(std::filesystem::path(file_char), false);
+      ion::res::LoadAsset<Shader>(std::filesystem::path(file_char), false);
     }
   }
-	for (const auto& [id, shader] : ion::GetSystem<AssetSystem>().GetShaders()) {
+	for (const auto& [id, shader] : ion::res::GetShaders()) {
     ImGui::Text("Shader: %s", id.c_str());
+    if (ImGui::IsItemHovered()) {
+			ImGui::BeginTooltip();
+      ImGui::Text("Path: %s", shader->GetPath().string().c_str());
+			ImGui::EndTooltip();
+    }
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("SHADER_ASSET", &ion::GetSystem<AssetSystem>().GetShaders().at(id), sizeof(std::shared_ptr<Shader>&));
+      ImGui::SetDragDropPayload("SHADER_ASSET", &ion::res::GetShaders().at(id), sizeof(std::shared_ptr<Shader>&));
       ImGui::EndDragDropSource();
 		}
   }
@@ -321,13 +343,13 @@ void AssetInspector() {
     auto file_char = tinyfd_openFileDialog("Load GPU Data", nullptr,
       0, nullptr, nullptr, false);
     if (file_char) {
-      ion::GetSystem<AssetSystem>().LoadAsset<GPUData>(std::filesystem::path(file_char), false);
+      ion::res::LoadAsset<GPUData>(std::filesystem::path(file_char), false);
     }
 	}
-	for (const auto& [id, gpu_data] : ion::GetSystem<AssetSystem>().GetGPUData()) {
+	for (const auto& [id, gpu_data] : ion::res::GetGPUData()) {
     ImGui::Text("GPU Data: %s", id.c_str());
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("GPU_DATA_ASSET", &ion::GetSystem<AssetSystem>().GetGPUData().at(id), sizeof(std::shared_ptr<GPUData>&));
+      ImGui::SetDragDropPayload("GPU_DATA_ASSET", &ion::res::GetGPUData().at(id), sizeof(std::shared_ptr<GPUData>&));
       ImGui::EndDragDropSource();
     }
   }
@@ -336,12 +358,13 @@ void AssetInspector() {
     auto file_char = tinyfd_openFileDialog("Load World", nullptr,
       0, nullptr, nullptr, false);
     if (file_char) {
-      ion::GetSystem<AssetSystem>().LoadAsset<World>(std::filesystem::path(file_char), false);
+      ion::res::LoadAsset<World>(std::filesystem::path(file_char), false);
     }
 	}
-	for (const auto& [id, world] : ion::GetSystem<AssetSystem>().GetWorlds()) {
+	for (const auto& [id, selected_world] : ion::res::GetWorlds()) {
 		if (ImGui::Selectable(std::format("World: {}", id).c_str())) {
-      auto new_world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world->GetWorldPath());
+      auto new_world = ion::res::LoadAsset<World>(world->GetWorldPath(), false);
+			std::swap(world, new_world);
     }
   }
   ImGui::End();

@@ -4,10 +4,6 @@
 
 namespace ion {
 	namespace gui {
-		enum class STARTWINDOW_EXCEPTION {
-			CANCELLED = 1
-		};
-
 		enum class STARTWINDOW_LATEFUNC {
 			UNSPECIFIED = 0,
 			NEW_WORLD_DIALOG = 1,

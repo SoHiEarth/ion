@@ -1,5 +1,10 @@
 #include "ion/script.h"
 #include <filesystem>
+#include <Python.h>
+
+namespace ion::script::internal {
+	ION_API bool python_initialized = false;
+}
 
 bool CheckPythonExists() {
 	// If the "Lib" directory doesn't exist, Python is not properly set up
@@ -11,7 +16,7 @@ bool CheckPythonExists() {
 	return true;
 }
 
-void ScriptSystem::RunScript(std::string_view script,
+void ion::script::internal::RunScript(std::string_view script,
 	std::string_view func,
 	std::map<std::string, std::string> parameters) {
 	if (!python_initialized) {
@@ -52,24 +57,30 @@ void ScriptSystem::RunScript(std::string_view script,
 }
 
 
-void ScriptSystem::Init() {
-	python_initialized = CheckPythonExists();
-	if (!python_initialized) {
+void ion::script::Init() {
+	internal::python_initialized = CheckPythonExists();
+	if (!internal::python_initialized) {
 		printf("Python library not found, skipping initialization.\n");
 		return;
 	}
 	Py_Initialize();
 }
 
-void ScriptSystem::Quit() {
-	if (!python_initialized) {
+void ion::script::Quit() {
+	if (!internal::python_initialized) {
 		return;
 	}
 	Py_Finalize();
 }
 
-void ScriptSystem::Update(std::shared_ptr<World> world) {
+void ion::script::Update(std::shared_ptr<World> world) {
+	if (!internal::python_initialized) {
+		return;
+	}
+	if (world->GetComponentSet<Script>().empty()) {
+		return;
+	}
 	for (auto& [entity, script] : world->GetComponentSet<Script>()) {
-		RunScript(script->path, script->module_name, script->parameters);
+		internal::RunScript(script->path, script->module_name, script->parameters);
 	}
 }

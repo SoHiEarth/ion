@@ -1,5 +1,4 @@
 #include "ion/assets.h"
-#include "ion/context.h"
 #include "ion/shader.h"
 #include "ion/texture.h"
 #include <pugixml.hpp>
@@ -16,13 +15,110 @@
 #include "stb_image.h"
 #include "ion/save_keys.h"
 
-static bool VerifyPathExists(const std::filesystem::path& path) {
-  return std::filesystem::exists(path);
+namespace ion::res::internal {
+  ION_API std::map<std::string, std::shared_ptr<Texture>> textures;
+  ION_API std::map<std::string, std::shared_ptr<Shader>> shaders;
+  ION_API std::map<std::string, std::shared_ptr<GPUData>> gpu_datas;
+  ION_API std::map<std::string, std::shared_ptr<World>> worlds;
+  ION_API std::map<std::string, std::shared_ptr<void>> custom_assets;
+  ION_API std::filesystem::path project_root;
 }
 
-bool AssetSystem::CheckApplicationStructure() {
-  if (!VerifyPathExists("assets")) {
-    printf("Assets directory does not exist, locate it? (y/n)");
+static void ProcessWorldManifest(std::shared_ptr<World> world) {
+  auto path = world->GetWorldPath();
+  if (!std::filesystem::exists(path)) {
+    throw std::runtime_error("World manifest does not exist: " + path.string());
+  }
+  auto doc = pugi::xml_document{};
+  doc.load_file(path.c_str());
+  auto meta = doc.child(ION_SAVE_METADATA);
+  if (strcmp(meta.attribute(ION_SAVE_VERSION).as_string(), ION_BUILD_VERSION) != 0) {
+    printf("World version mismatch: expected %s, got %s\n",
+      ION_BUILD_VERSION,
+      meta.attribute(ION_SAVE_VERSION).as_string());
+  }
+  auto root = doc.child(ION_SAVE_WORLD);
+  for (auto marker_node : root.children(ION_SAVE_MARKER_KEY)) {
+    auto id = marker_node.attribute(ION_SAVE_MARKER_ID).as_uint();
+    auto value = marker_node.attribute(ION_SAVE_MARKER_VAL).as_string();
+    world->GetMarkers().insert({ id, value });
+  }
+  for (auto component_node : root.children(ION_SAVE_COMPONENT_KEY)) {
+    auto type = std::string(component_node.attribute(ION_SAVE_COMPONENT_TYPE).as_string());
+    auto id = component_node.attribute(ION_SAVE_ENTITY_ID).as_uint();
+    if (type == ION_SAVE_TRANSFORM_KEY) {
+      auto transform = world->NewComponent<Transform>(id);
+      auto transform_node = component_node.child(ION_SAVE_TRANSFORM_KEY);
+      transform->position.x = transform_node.attribute(ION_SAVE_TRANSFORM_POS_X).as_float();
+      transform->position.y = transform_node.attribute(ION_SAVE_TRANSFORM_POS_Y).as_float();
+      transform->rotation = transform_node.attribute(ION_SAVE_TRANSFORM_ROTATION).as_float(transform->rotation);
+      transform->scale.x = transform_node.attribute(ION_SAVE_TRANSFORM_SCALE_X).as_float(transform->scale.x);
+      transform->scale.y = transform_node.attribute(ION_SAVE_TRANSFORM_SCALE_Y).as_float(transform->scale.y);
+    }
+    else if (type == ION_SAVE_RENDERABLE_KEY) {
+      auto renderable = world->NewComponent<Renderable>(id);
+      auto renderable_node = component_node.child(ION_SAVE_RENDERABLE_KEY);
+      renderable->color = ion::res::LoadAsset<Texture>(renderable_node.attribute(ION_SAVE_RENDERABLE_COLOR).as_string());
+      renderable->normal = ion::res::LoadAsset<Texture>(renderable_node.attribute(ION_SAVE_RENDERABLE_NORMAL).as_string());
+      renderable->shader = ion::res::LoadAsset<Shader>(renderable_node.attribute(ION_SAVE_RENDERABLE_SHADER).as_string());
+      renderable->data = ion::res::LoadAsset<GPUData>(renderable_node.attribute(ION_SAVE_RENDERABLE_GPU_DATA).as_string());
+    }
+    else if (type == ION_SAVE_LIGHT_KEY) {
+      auto light = world->NewComponent<Light>(id);
+      auto light_node = component_node.child(ION_SAVE_LIGHT_KEY);
+      light->type = static_cast<LightType>(light_node.attribute(ION_SAVE_LIGHT_TYPE).as_int());
+      light->intensity = light_node.attribute(ION_SAVE_LIGHT_INTENSITY).as_float(light->intensity);
+      light->radial_falloff = light_node.attribute(ION_SAVE_LIGHT_RADIAL_FALLOFF).as_float(light->radial_falloff);
+      light->volumetric_intensity = light_node.attribute(ION_SAVE_LIGHT_VOLUMETRIC_INTENSITY).as_float(light->volumetric_intensity);
+      light->color.r = light_node.attribute(ION_SAVE_LIGHT_COLOR_R).as_float(light->color.r);
+      light->color.g = light_node.attribute(ION_SAVE_LIGHT_COLOR_G).as_float(light->color.g);
+      light->color.b = light_node.attribute(ION_SAVE_LIGHT_COLOR_B).as_float(light->color.b);
+    }
+    else if (type == ION_SAVE_CAMERA_KEY) {
+			auto camera = world->NewComponent<Camera>(id);
+    }
+  }
+}
+static DataType StringToDataType(std::string_view str) {
+  static const std::map<std::string, DataType> type_map = {
+    {"INT", DataType::INT},
+    {"UINT", DataType::UNSIGNED_INT},
+    {"FLOAT", DataType::FLOAT}
+  };
+  auto it = type_map.find(str.data());
+  return it != type_map.end() ? it->second : DataType::FLOAT;
+}
+static DataDescriptor LoadGPUDataManifest(std::filesystem::path path) {
+  if (!std::filesystem::exists(path)) {
+    printf("GPUData manifest does not exist: %s\n", path.string().c_str());
+    return {};
+  }
+  auto doc = pugi::xml_document{};
+  doc.load_file(path.c_str());
+  auto root = doc.child("GPUData");
+  DataDescriptor descriptor{};
+  for (auto pointer_node : root.children("AttributePointer")) {
+    AttributePointer pointer{};
+    pointer.size = pointer_node.attribute("size").as_int();
+		pointer.type = StringToDataType(pointer_node.attribute("type").as_string());
+    pointer.normalized = pointer_node.attribute("normalized").as_bool();
+    pointer.stride = static_cast<size_t>(pointer_node.attribute("stride").as_ullong());
+    pointer.pointer = reinterpret_cast<const void*>(pointer_node.attribute("pointer").as_ullong());
+    descriptor.pointers.push_back(pointer);
+  }
+  descriptor.element_enabled = root.attribute("element_enabled").as_bool();
+  for (auto vertex_node : root.child("vertices").children("vertex")) {
+    descriptor.vertices.push_back(vertex_node.attribute("val").as_float());
+  }
+  for (auto index_node : root.child("indices").children("index")) {
+    descriptor.indices.push_back(index_node.attribute("val").as_uint());
+  }
+  return descriptor;
+}
+
+ION_API bool ion::res::CheckApplicationStructure() {
+  if (!std::filesystem::exists("assets")) {
+    printf("Assets directory does not exist, locate it? (y/n): ");
 		auto response = getchar();
     if (response == 'y') {
       auto dir = tinyfd_selectFolderDialog("Select Assets Directory", nullptr);
@@ -44,9 +140,14 @@ bool AssetSystem::CheckApplicationStructure() {
   }
   return true;
 }
+ION_API void ion::res::SetProjectRoot(std::filesystem::path path) {
+  internal::project_root = path;
+}
+ION_API std::filesystem::path ion::res::GetProjectRoot() {
+	return internal::project_root;
+}
 
-template <>
-std::shared_ptr<World> AssetSystem::CreateAsset<World>(std::filesystem::path path) {
+template <> ION_API std::shared_ptr<World> ion::res::CreateAsset<World>(std::filesystem::path path) {
   if (std::filesystem::exists(path)) {
     printf("World already exists at path: %s\n", path.string().c_str());
     return nullptr;
@@ -58,12 +159,10 @@ std::shared_ptr<World> AssetSystem::CreateAsset<World>(std::filesystem::path pat
   }
 
   SaveAsset<World>(path, world);
-	worlds.insert({ ion::id::GenerateHashFromString(path.string()), world });
+	internal::worlds.insert({ ion::id::GenerateHashFromString(path.string()), world });
   return world;
 }
-
-template <>
-void AssetSystem::SaveAsset(std::filesystem::path path, std::shared_ptr<World> asset) {
+template <> ION_API void ion::res::SaveAsset(std::filesystem::path path, std::shared_ptr<World> asset) {
   auto doc = pugi::xml_document();
   auto declaration = doc.append_child(ION_SAVE_METADATA);
   declaration.append_attribute(ION_SAVE_VERSION) = ION_BUILD_VERSION;
@@ -115,125 +214,77 @@ void AssetSystem::SaveAsset(std::filesystem::path path, std::shared_ptr<World> a
   }
   doc.save_file(path.c_str());
 }
-
-template <>
-std::shared_ptr<Texture>
-AssetSystem::LoadAsset<Texture>(std::filesystem::path path, bool is_hash) {
-  if (!is_hash) {
-    if (!std::filesystem::exists(path)) {
-      printf("Texture manifest does not exist: %s\n", path.string().c_str());
-      return nullptr;
-    }
-    auto id = ion::id::GenerateHashFromString(path.string());
-    if (!std::filesystem::exists(GetProjectRoot() / id)) {
-      printf("Copying asset from %s as %s\n", std::filesystem::absolute(path).string().c_str(), id.c_str());
-      std::filesystem::copy_file(std::filesystem::absolute(path), GetProjectRoot() / id, std::filesystem::copy_options::update_existing);
-    }
-		path = GetProjectRoot() / id;
-    TextureInfo info{};
-    info.data = stbi_load(path.string().c_str(), &info.width, &info.height, &info.nr_channels, 0);
-    if (!info.data) {
-      printf("Failed to load texture image: Path: %s, Reason: %s\n", path.string().c_str(), stbi_failure_reason());
-      return nullptr;
-    }
-    auto texture = std::make_shared<Texture>(id);
-    texture->texture = ion::GetSystem<RenderSystem>().ConfigureTexture(info);
-    stbi_image_free(info.data);
-    textures.insert({ id, texture });
-    return texture;
+template <> ION_API std::shared_ptr<World> ion::res::LoadAsset<World>(std::filesystem::path path, bool is_hash) {
+    SetProjectRoot(path.parent_path() / "assets");
+  if (!std::filesystem::exists(path.parent_path() / "assets")) {
+    std::filesystem::create_directory(path.parent_path() / "assets");
+  }
+  auto world = std::make_shared<World>(path);
+  ProcessWorldManifest(world);
+  if (is_hash) {
+    internal::worlds.insert({ path.filename().string(), world});
   }
   else {
-		path = GetProjectRoot() / path.filename();
-    TextureInfo info{};
-    info.data = stbi_load(path.string().c_str(), &info.width, &info.height, &info.nr_channels, 0);
-    if (!info.data) {
-      printf("Failed to load texture image: Path: %s, Reason: %s\n", path.string().c_str(), stbi_failure_reason());
-      return nullptr;
-    }
-    auto texture = std::make_shared<Texture>(path.filename().string());
-    texture->texture = ion::GetSystem<RenderSystem>().ConfigureTexture(info);
-    stbi_image_free(info.data);
-    textures.insert({ path.string(), texture });
-		return texture;
+    internal::worlds.insert({ ion::id::GenerateHashFromString(path.string()), world });
   }
+  return world;
 }
+template <> ION_API std::shared_ptr<Texture> ion::res::LoadAsset<Texture>(std::filesystem::path source_path, bool is_hash) {
+  std::string id;
+  if (!is_hash) {
+    if (!std::filesystem::exists(source_path)) {
+      throw std::runtime_error(std::format("Texture does not exist: {}\n", source_path.string()));
+    }
+    id = ion::id::GenerateHashFromString(source_path.string());
+    std::filesystem::copy_file(std::filesystem::absolute(source_path), GetProjectRoot() / id, std::filesystem::copy_options::update_existing);
+  }
+  else {
+		id = source_path.filename().string();
+  }
 
-template <>
-std::shared_ptr<Shader>
-AssetSystem::LoadAsset<Shader>(std::filesystem::path path, bool is_hash) {
-	// Check for directory structure
+	std::filesystem::path imported_path = GetProjectRoot() / id;
+  TextureInfo info{};
+  info.data = stbi_load(imported_path.string().c_str(), &info.width, &info.height, &info.nr_channels, 0);
+  if (!info.data) {
+    printf("Failed to load texture image: Path: %s, Reason: %s\n", imported_path.string().c_str(), stbi_failure_reason());
+    return nullptr;
+  }
+  auto texture = std::make_shared<Texture>(imported_path, id);
+  texture->texture = ion::render::ConfigureTexture(info);
+  stbi_image_free(info.data);
+  internal::textures.insert({ id, texture });
+  return texture;
+}
+template <> ION_API std::shared_ptr<Shader> ion::res::LoadAsset<Shader>(std::filesystem::path source_path, bool is_hash) {
+  std::string id;
 	if (!is_hash) {
-    if (!std::filesystem::exists(path)) {
-      printf("Shader directory does not exist: %s\n", path.string().c_str());
-      return nullptr;
+    if (!std::filesystem::exists(source_path)) {
+      throw std::runtime_error(std::format("Shader directory does not exist: {}\n", source_path.string()));
     }
-    auto abs_path = std::filesystem::absolute(path);
-    if (!std::filesystem::exists(abs_path / "vs.glsl") ||
-      !std::filesystem::exists(abs_path / "fs.glsl")) {
-      printf("Shader directory missing vs.glsl or fs.glsl: %s\n", path.string().c_str());
-      return nullptr;
+    if (!std::filesystem::exists(source_path / "vs.glsl") ||
+      !std::filesystem::exists(source_path / "fs.glsl")) {
+      throw std::runtime_error(std::format("Shader directory missing vs.glsl or fs.glsl: {}\n", source_path.string()));
     }
-    auto id = ion::id::GenerateHashFromString(path.string());
+    id = ion::id::GenerateHashFromString(source_path.string());
     auto shader_directory = GetProjectRoot() / id;
     std::filesystem::create_directory(shader_directory);
-
-    std::filesystem::copy_file(abs_path / "vs.glsl",
+    std::filesystem::copy_file(source_path / "vs.glsl",
       shader_directory / "vs.glsl",
       std::filesystem::copy_options::update_existing);
-
-    std::filesystem::copy_file(abs_path / "fs.glsl",
+    std::filesystem::copy_file(source_path / "fs.glsl",
       shader_directory / "fs.glsl",
       std::filesystem::copy_options::update_existing);
-    auto shader = std::make_shared<Shader>(shader_directory, id);
-    shaders.insert({ id, shader });
-		return shader;
+  }
+  else {
+		id = source_path.filename().string();
   }
 
-  path = GetProjectRoot() / path;
-  auto shader = std::make_shared<Shader>(path, path.filename().string());
-	shaders.insert({ path.string(), shader });
+  auto imported_path = GetProjectRoot() / id;
+  auto shader = std::make_shared<Shader>(imported_path, id);
+  internal::shaders.insert({ id, shader });
 	return shader;
 }
-
-DataDescriptor LoadGPUDataManifest(std::filesystem::path path) {
-  if (!std::filesystem::exists(path)) {
-    printf("GPUData manifest does not exist: %s\n", path.string().c_str());
-    return {};
-  }
-  auto doc = pugi::xml_document{};
-  doc.load_file(path.c_str());
-  auto root = doc.child("GPUData");
-  DataDescriptor descriptor{};
-	for (auto pointer_node : root.children("AttributePointer")) {
-    AttributePointer pointer{};
-    pointer.size = pointer_node.attribute("size").as_int();
-    auto type_str = std::string(pointer_node.attribute("type").as_string());
-    if (type_str == "INT") {
-      pointer.type = DataType::INT;
-    }
-    else if (type_str == "UINT") {
-      pointer.type = DataType::UNSIGNED_INT;
-    }
-    else if (type_str == "FLOAT") {
-      pointer.type = DataType::FLOAT;
-    }
-    pointer.normalized = pointer_node.attribute("normalized").as_bool();
-    pointer.stride = static_cast<size_t>(pointer_node.attribute("stride").as_ullong());
-    pointer.pointer = reinterpret_cast<const void*>(pointer_node.attribute("pointer").as_ullong());
-    descriptor.pointers.push_back(pointer);
-	}
-	descriptor.element_enabled = root.attribute("element_enabled").as_bool();
-  for (auto vertex_node : root.child("vertices").children("vertex")) {
-    descriptor.vertices.push_back(vertex_node.attribute("val").as_float());
-  }
-  for (auto index_node : root.child("indices").children("index")) {
-    descriptor.indices.push_back(index_node.attribute("val").as_uint());
-	}
-  return descriptor;
-}
-
-template <>
-std::shared_ptr<GPUData> AssetSystem::LoadAsset<GPUData>(std::filesystem::path path, bool is_hash) {
+template <> ION_API std::shared_ptr<GPUData> ion::res::LoadAsset<GPUData>(std::filesystem::path path, bool is_hash) {
   if (!is_hash) {
     if (!std::filesystem::exists(path)) {
       printf("GPUData manifest does not exist: %s\n", path.string().c_str());
@@ -246,18 +297,16 @@ std::shared_ptr<GPUData> AssetSystem::LoadAsset<GPUData>(std::filesystem::path p
     }
 		path = GetProjectRoot() / id;
 		auto gpu_data = std::make_shared<GPUData>(LoadGPUDataManifest(path), id);
-		ion::GetSystem<RenderSystem>().ConfigureData(gpu_data);
-		gpu_datas.insert({ id, gpu_data });
+		ion::render::ConfigureData(gpu_data);
+		internal::gpu_datas.insert({ id, gpu_data });
     return gpu_data;
   }
 	auto gpu_data = std::make_shared<GPUData>(LoadGPUDataManifest(GetProjectRoot() / path), path.filename().string());
-	ion::GetSystem<RenderSystem>().ConfigureData(gpu_data);
-	gpu_datas.insert({ path.filename().string(), gpu_data});
+	ion::render::ConfigureData(gpu_data);
+	internal::gpu_datas.insert({ path.filename().string(), gpu_data});
 	return gpu_data;
 }
-
-template <>
-void AssetSystem::SaveAsset(std::filesystem::path path, std::shared_ptr<GPUData> asset) {
+template <> ION_API void ion::res::SaveAsset(std::filesystem::path path, std::shared_ptr<GPUData> asset) {
   auto doc = pugi::xml_document();
   auto root = doc.append_child("GPUData");
   root.append_attribute("element_enabled") = asset->element_enabled;
@@ -290,78 +339,4 @@ void AssetSystem::SaveAsset(std::filesystem::path path, std::shared_ptr<GPUData>
     index_node.append_attribute("val") = index;
   }
   doc.save_file(path.c_str());
-}
-
-static void ProcessWorldManifest(std::shared_ptr<World> world) {
-	auto path = world->GetWorldPath();
-  if (!std::filesystem::exists(path)) {
-		throw std::runtime_error("World manifest does not exist: " + path.string());
-	}
-	auto doc = pugi::xml_document{};
-  doc.load_file(path.c_str());
-  auto meta = doc.child(ION_SAVE_METADATA);
-  if (strcmp(meta.attribute(ION_SAVE_VERSION).as_string(), ION_BUILD_VERSION) != 0) {
-		printf("World version mismatch: expected %s, got %s\n",
-      ION_BUILD_VERSION,
-      meta.attribute(ION_SAVE_VERSION).as_string());
-  }
-	auto root = doc.child(ION_SAVE_WORLD);
-  for (auto marker_node : root.children(ION_SAVE_MARKER_KEY)) {
-    auto id = marker_node.attribute(ION_SAVE_MARKER_ID).as_uint();
-    auto value = marker_node.attribute(ION_SAVE_MARKER_VAL).as_string();
-    world->GetMarkers().insert({id, value});
-	}
-	for (auto component_node : root.children(ION_SAVE_COMPONENT_KEY)) {
-    auto type = std::string(component_node.attribute(ION_SAVE_COMPONENT_TYPE).as_string());
-    auto id = component_node.attribute(ION_SAVE_ENTITY_ID).as_uint();
-    if (type == ION_SAVE_TRANSFORM_KEY) {
-      auto transform = world->NewComponent<Transform>(id);
-      auto transform_node = component_node.child(ION_SAVE_TRANSFORM_KEY);
-      transform->position.x = transform_node.attribute(ION_SAVE_TRANSFORM_POS_X).as_float();
-      transform->position.y = transform_node.attribute(ION_SAVE_TRANSFORM_POS_Y).as_float();
-			transform->rotation = transform_node.attribute(ION_SAVE_TRANSFORM_ROTATION).as_float(transform->rotation);
-      transform->scale.x = transform_node.attribute(ION_SAVE_TRANSFORM_SCALE_X).as_float(transform->scale.x);
-      transform->scale.y = transform_node.attribute(ION_SAVE_TRANSFORM_SCALE_Y).as_float(transform->scale.y);
-    }
-    if (type == ION_SAVE_RENDERABLE_KEY) {
-      auto renderable = world->NewComponent<Renderable>(id);
-      auto renderable_node = component_node.child(ION_SAVE_RENDERABLE_KEY);
-			renderable->color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>(renderable_node.attribute(ION_SAVE_RENDERABLE_COLOR).as_string());
-			renderable->normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>(renderable_node.attribute(ION_SAVE_RENDERABLE_NORMAL).as_string());
-			renderable->shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>(renderable_node.attribute(ION_SAVE_RENDERABLE_SHADER).as_string());
-			renderable->data = ion::GetSystem<AssetSystem>().LoadAsset<GPUData>(renderable_node.attribute(ION_SAVE_RENDERABLE_GPU_DATA).as_string());
-    }
-    if (type == ION_SAVE_LIGHT_KEY) {
-			auto light = world->NewComponent<Light>(id);
-      auto light_node = component_node.child(ION_SAVE_LIGHT_KEY);
-			light->type = static_cast<LightType>(light_node.attribute(ION_SAVE_LIGHT_TYPE).as_int());
-			light->intensity = light_node.attribute(ION_SAVE_LIGHT_INTENSITY).as_float(light->intensity);
-			light->radial_falloff = light_node.attribute(ION_SAVE_LIGHT_RADIAL_FALLOFF).as_float(light->radial_falloff);
-			light->volumetric_intensity = light_node.attribute(ION_SAVE_LIGHT_VOLUMETRIC_INTENSITY).as_float(light->volumetric_intensity);
-			light->color.r = light_node.attribute(ION_SAVE_LIGHT_COLOR_R).as_float(light->color.r);
-			light->color.g = light_node.attribute(ION_SAVE_LIGHT_COLOR_G).as_float(light->color.g);
-			light->color.b = light_node.attribute(ION_SAVE_LIGHT_COLOR_B).as_float(light->color.b);
-    }
-    if (type == ION_SAVE_CAMERA_KEY) {
-      auto camera = world->NewComponent<Camera>(id);
-      auto camera_node = component_node.child(ION_SAVE_CAMERA_KEY);
-    }
-  }
-}
-
-template <>
-std::shared_ptr<World> AssetSystem::LoadAsset<World>(std::filesystem::path path, bool is_hash) {
-	auto world = std::make_shared<World>(path);
-	SetProjectRoot(path.parent_path() / "assets");
-	if (!std::filesystem::exists(path.parent_path() / "assets")) {
-		std::filesystem::create_directory(path.parent_path() / "assets");
-  }
-	ProcessWorldManifest(world);
-  if (is_hash) {
-    worlds.insert({ path.string(), world });
-  }
-  else {
-		worlds.insert({ ion::id::GenerateHashFromString(path.string()), world });
-  }
-  return world;
 }

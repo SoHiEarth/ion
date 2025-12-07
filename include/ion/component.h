@@ -10,7 +10,6 @@ struct Texture;
 struct Shader;
 struct GPUData;
 
-enum class ProjectionMode : std::uint8_t { PERSPECTIVE = 0, ORTHOGRAPHIC = 1 };
 enum class LightType : std::uint8_t { GLOBAL = 0, POINT = 1 };
 struct ION_API Transform {
   glm::vec2 position = glm::vec2(0.0f);
@@ -40,8 +39,6 @@ struct ION_API Light {
 };
 
 struct ION_API Camera {
-  glm::vec2 position = glm::vec2(0.0f, 0.0f);
-  ProjectionMode mode = ProjectionMode::PERSPECTIVE;
 };
 
 

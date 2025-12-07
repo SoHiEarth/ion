@@ -1,19 +1,27 @@
 #include "ion/physics.h"
 #include <box2d/box2d.h>
 
-b2WorldId PhysicsSystem::GetWorld() { return world; }
+namespace ion::physics::internal {
+  ION_API b2WorldId world = b2WorldId{};
+} // namespace ion::physics::internal
 
-void PhysicsSystem::Init() {
-  auto world_def = b2DefaultWorldDef();
-  world_def.gravity = b2Vec2(0.0F, -1.0F);
-  world = b2CreateWorld(&world_def);
+b2WorldId ion::physics::GetWorld() {
+  return internal::world;
 }
 
-void PhysicsSystem::Update() { b2World_Step(world, 1.0F / 60.0F, 6); }
+void ion::physics::Init() {
+  auto world_def = b2DefaultWorldDef();
+  world_def.gravity = b2Vec2(0.0F, -1.0F);
+  internal::world = b2CreateWorld(&world_def);
+}
 
-void PhysicsSystem::Quit() {
-  if (b2World_IsValid(world)) {
-    b2DestroyWorld(world);
-    world = b2WorldId{0, 0};
+void ion::physics::Update() {
+  b2World_Step(internal::world, 1.0F / 60.0F, 6);
+}
+
+void ion::physics::Quit() {
+  if (b2World_IsValid(internal::world)) {
+    b2DestroyWorld(internal::world);
+    internal::world = b2WorldId{};
   }
 }

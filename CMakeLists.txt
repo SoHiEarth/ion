@@ -18,7 +18,8 @@ target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
 target_compile_definitions(ion-base PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-base PRIVATE
   src/base/assets.cc
-  src/base/context.cc
+  src/base/base_pipeline.cc
+  src/base/defaults.cc
   src/base/shader.cc
   src/base/script.cc
   src/base/render.cc
@@ -41,9 +42,9 @@ target_link_libraries(ion-base PUBLIC
     pugixml::pugixml
 )
 
-add_library(ion-game STATIC)
+add_library(ion-game SHARED)
 target_compile_features(ion-game PRIVATE cxx_std_20)
-#target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
+target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
 target_compile_definitions(ion-game PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-game PRIVATE
   src/game/game.cc
@@ -67,6 +68,7 @@ target_sources(ion-development PRIVATE
 target_compile_definitions(ion-development PRIVATE
   ION_BUILD_VERSION="${PROJECT_VERSION}"
   ION_DEVELOPMENT
+  ION_IMPORTS
 )
 set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
 target_include_directories(ion-development PRIVATE ${CMAKE_SOURCE_DIR}/include)
