@@ -103,33 +103,32 @@ static GLenum GetTypeEnum(DataType type) {
   }
 }
 
-std::shared_ptr<GPUData> RenderSystem::CreateData(DataDescriptor &data_desc) {
-  auto data = std::make_shared<GPUData>();
-  data->element_enabled = data_desc.element_enabled;
-  glGenVertexArrays(1, &data->vertex_attrib);
-  glGenBuffers(1, &data->vertex_buffer);
-  if (data->element_enabled) {
-    glGenBuffers(1, &data->element_buffer);
+void RenderSystem::ConfigureData(std::shared_ptr<GPUData> gpu_data) {
+	auto desc = gpu_data->GetDescriptor();
+  gpu_data->element_enabled = desc.element_enabled;
+  glGenVertexArrays(1, &gpu_data->vertex_attrib);
+  glGenBuffers(1, &gpu_data->vertex_buffer);
+  if (gpu_data->element_enabled) {
+    glGenBuffers(1, &gpu_data->element_buffer);
   }
-  glBindVertexArray(data->vertex_attrib);
-  glBindBuffer(GL_ARRAY_BUFFER, data->vertex_buffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * data_desc.vertices.size(),
-               data_desc.vertices.data(), GL_STATIC_DRAW);
-  if (data->element_enabled) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data->element_buffer);
+  glBindVertexArray(gpu_data->vertex_attrib);
+  glBindBuffer(GL_ARRAY_BUFFER, gpu_data->vertex_buffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * desc.vertices.size(),
+               desc.vertices.data(), GL_STATIC_DRAW);
+  if (gpu_data->element_enabled) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu_data->element_buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 sizeof(unsigned int) * data_desc.indices.size(),
-                 data_desc.indices.data(), GL_STATIC_DRAW);
+                 sizeof(unsigned int) * desc.indices.size(),
+                 desc.indices.data(), GL_STATIC_DRAW);
   }
-  for (int i = 0; i < data_desc.pointers.size(); i++) {
-    auto &pointer_data = data_desc.pointers[i];
+  for (int i = 0; i < desc.pointers.size(); i++) {
+    auto &pointer_data = desc.pointers[i];
     glVertexAttribPointer(i, pointer_data.size, GetTypeEnum(pointer_data.type),
                           pointer_data.normalized, pointer_data.stride,
                           pointer_data.pointer);
     glEnableVertexAttribArray(i);
   }
   UnbindData();
-  return data;
 }
 
 void RenderSystem::DestroyData(std::shared_ptr<GPUData> data) {
@@ -255,6 +254,10 @@ void RenderSystem::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
     for (auto &[entity_id, transform] : all_transforms) {
       auto renderable = world->GetComponent<Renderable>(entity_id);
       if (renderable) {
+        if (!renderable->shader || !renderable->data ||
+            !renderable->color || !renderable->normal) {
+          continue;
+				}
         BindData(renderable->data);
         renderable->shader->Use();
 				renderable->shader->SetUniform("layer", transform->layer);

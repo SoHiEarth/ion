@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<GPUData element_enabled="true">
+	<AttributePointer size="2" type="FLOAT" normalized="false" stride="16" pointer="0" />
+	<AttributePointer size="2" type="FLOAT" normalized="false" stride="16" pointer="8" />
+	<vertices>
+		<vertex val="1" />
+		<vertex val="1" />
+		<vertex val="1" />
+		<vertex val="1" />
+		<vertex val="1" />
+		<vertex val="-1" />
+		<vertex val="1" />
+		<vertex val="0" />
+		<vertex val="-1" />
+		<vertex val="-1" />
+		<vertex val="0" />
+		<vertex val="0" />
+		<vertex val="-1" />
+		<vertex val="1" />
+		<vertex val="0" />
+		<vertex val="1" />
+	</vertices>
+	<indices>
+		<index val="0" />
+		<index val="1" />
+		<index val="3" />
+		<index val="1" />
+		<index val="2" />
+		<index val="3" />
+	</indices>
+</GPUData>

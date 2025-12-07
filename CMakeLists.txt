@@ -59,12 +59,15 @@ add_executable(ion-development)
 target_compile_features(ion-development PRIVATE cxx_std_20)
 target_sources(ion-development PRIVATE
   src/development/gui.cc
-  src/development/write_to_disk.cc
   src/development/package.cc
   src/development/inspector.cc
   src/development/main.cc
+  src/development/startwindow.cc
 )
-target_compile_definitions(ion-development PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(ion-development PRIVATE
+  ION_BUILD_VERSION="${PROJECT_VERSION}"
+  ION_DEVELOPMENT
+)
 set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
 target_include_directories(ion-development PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ion-development PUBLIC

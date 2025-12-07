@@ -41,8 +41,7 @@ std::map<int, std::filesystem::path> ReadWorldList() {
 		std::istringstream line_stream(line);
 		std::string world_id_str, path_str, load_type_str;
 		if (std::getline(line_stream, world_id_str, ',') &&
-			std::getline(line_stream, path_str, ',') &&
-			std::getline(line_stream, load_type_str)) {
+			std::getline(line_stream, path_str, ',')) {
 			int world_id = std::stoi(world_id_str);
 			auto path = std::filesystem::path(path_str);
 			worlds.insert({ world_id, path });
@@ -111,7 +110,10 @@ int main() {
     .vertices = screen_vertices,
     .indices = indices
   };
-  auto screen_data = ion::GetSystem<RenderSystem>().CreateData(screen_data_desc);
+  // save it first
+	ion::GetSystem<AssetSystem>().SaveAsset<GPUData>("assets/screen_quad", std::make_shared<GPUData>(screen_data_desc, "assets/screen_quad"));
+  //auto screen_data = ion::GetSystem<RenderSystem>().CreateData(screen_data_desc);
+	auto screen_data = ion::GetSystem<AssetSystem>().LoadAsset<GPUData>("assets/screen_quad");
 
   auto framebuffer_info = FramebufferInfo{
       .recreate_on_resize = true
@@ -138,11 +140,12 @@ int main() {
   auto combine_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/bloom_combine_shader");
   auto tonemap_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/tonemap_shader");
 
+	ion::GetSystem<AssetSystem>().SaveAsset<GPUData>("assets/default_quad", std::make_shared<GPUData>(data_desc, "assets/default_quad"));
   auto defaults = Defaults{
     .default_color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/color.png"),
 		.default_normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/normal.png"),
     .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader"),
-    .default_data = ion::GetSystem<RenderSystem>().CreateData(data_desc)
+		.default_data = ion::GetSystem<AssetSystem>().LoadAsset<GPUData>("assets/default_quad")
   };
 
   while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {

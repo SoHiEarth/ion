@@ -14,6 +14,7 @@
 #include "ion/shader.h"
 #include "ion/development/inspector.h"
 #include "ion/development/gui.h"
+#include "ion/development/startwindow.h"
 #include "ion/game/game.h"
 
 std::vector<float> vertices = {
@@ -43,12 +44,14 @@ int main(int argc, char **argv) {
   ion::gui::Init(ion::GetSystem<RenderSystem>().GetWindow());
   ion::GetSystem<PhysicsSystem>().Init();
   ion::GetSystem<ScriptSystem>().Init();
-  auto world_path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
-  if (!world_path) {
-    tinyfd_messageBox("Error", "No world selected. Exiting.", "ok", "error", 1);
+  std::shared_ptr<World> world = nullptr;
+  try {
+    world = ion::gui::StartWindow();
+  }
+  catch (ion::gui::STARTWINDOW_EXCEPTION e) {
+    printf("Start Window Quit with message %d, exiting.", static_cast<int>(e));
     return -1;
   }
-  auto world = ion::GetSystem<AssetSystem>().LoadAsset<World>(world_path);
 
   AttributePointer position_pointer {
     .size = 3,
@@ -70,7 +73,6 @@ int main(int argc, char **argv) {
     .vertices = vertices,
     .indices = indices
   };
-
   AttributePointer screen_position_pointer {
     .size = 2,
     .type = DataType::FLOAT,
@@ -91,7 +93,7 @@ int main(int argc, char **argv) {
     .vertices = screen_vertices,
     .indices = indices
   };
-  auto screen_data = ion::GetSystem<RenderSystem>().CreateData(screen_data_desc);
+  auto screen_data = ion::GetSystem<AssetSystem>().LoadAsset<GPUData>("assets/screen_quad", false);
 
   auto framebuffer_info = FramebufferInfo{
       .recreate_on_resize = true
@@ -122,17 +124,8 @@ int main(int argc, char **argv) {
     .default_color = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/color.png", false),
     .default_normal = ion::GetSystem<AssetSystem>().LoadAsset<Texture>("assets/test_sprite/normal.png", false),
     .default_shader = ion::GetSystem<AssetSystem>().LoadAsset<Shader>("assets/texture_shader", false),
-    .default_data = ion::GetSystem<RenderSystem>().CreateData(data_desc)
-	};
-
-  auto camera_entity = world->CreateEntity();
-  world->NewComponent<Camera>(camera_entity);
-  auto entity = world->CreateEntity();
-  auto renderable = world->NewComponent<Renderable>(entity);
-	renderable->color = defaults.default_color;
-  renderable->normal = defaults.default_normal;
-	renderable->shader = defaults.default_shader;
-	renderable->data = defaults.default_data;
+    .default_data = ion::GetSystem<AssetSystem>().LoadAsset<GPUData>("assets/default_quad", false)
+  };
 
   while (!glfwWindowShouldClose(ion::GetSystem<RenderSystem>().GetWindow())) {
     glfwPollEvents();

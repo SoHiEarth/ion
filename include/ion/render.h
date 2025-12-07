@@ -13,21 +13,6 @@ struct Transform;
 struct Texture;
 struct Shader;
 struct World;
-enum class DataType : std::uint8_t { INT, UNSIGNED_INT, FLOAT };
-struct ION_API AttributePointer {
-  int size = 2;
-  DataType type = DataType::FLOAT;
-  bool normalized = false;
-  size_t stride = 0;
-  const void *pointer = 0;
-};
-
-struct ION_API DataDescriptor {
-  std::vector<AttributePointer> pointers;
-  bool element_enabled = false;
-  std::vector<float> vertices;
-  std::vector<unsigned int> indices;
-};
 
 struct ION_API TextureInfo {
   unsigned char *data;
@@ -69,7 +54,7 @@ public:
 	glm::vec3 GetClearColor();
 	void SetClearColor(glm::vec3 color);
   
-  std::shared_ptr<GPUData> CreateData(DataDescriptor&);
+  void ConfigureData(std::shared_ptr<GPUData>);
   void DestroyData(std::shared_ptr<GPUData>);
   void BindData(std::shared_ptr<GPUData>);
   void UnbindData();
