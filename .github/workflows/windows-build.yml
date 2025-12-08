@@ -8,17 +8,15 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
+    runs-on: windows-latest
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
+        
     - name: Cache vcpkg directory
       uses: actions/cache@v4
       with:
@@ -27,6 +25,7 @@ jobs:
         restore-keys: |
           vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
           vcpkg-${{ runner.os }}-
+          
     - name: Cache builds directory
       uses: actions/cache@v4
       with:
@@ -56,7 +55,7 @@ jobs:
         Set-Location $cwd
 
         $releaseRel = "builds\\ninja-multi-vcpkg\\Release"
-        $zipFullPath = Join-Path $cwd (Join-Path $releaseRel "ion-latest.zip")
+        $zipFullPath = Join-Path $cwd (Join-Path $releaseRel "ion-latest-windows.zip")
 
         if (Test-Path $zipFullPath) { Remove-Item $zipFullPath -Force }
 
