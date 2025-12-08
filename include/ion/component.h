@@ -1,10 +1,10 @@
 #pragma once
+#include "exports.h"
 #include <box2d/box2d.h>
 #include <glm/glm.hpp>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
-#include "exports.h"
 
 struct Texture;
 struct Shader;
@@ -31,16 +31,14 @@ struct ION_API Renderable {
 };
 
 struct ION_API Light {
-	LightType type = LightType::POINT;
+  LightType type = LightType::POINT;
   float intensity = 1.0f;
   float radial_falloff = 1.0f;
-	float volumetric_intensity = 0.0f;
+  float volumetric_intensity = 0.0f;
   glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f);
 };
 
-struct ION_API Camera {
-};
-
+struct ION_API Camera {};
 
 struct ION_API Script {
   std::string path = "";

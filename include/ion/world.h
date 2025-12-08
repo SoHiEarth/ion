@@ -2,8 +2,8 @@
 
 #include "component.h"
 #include "render.h"
-#include <map>
 #include <filesystem>
+#include <map>
 #include <memory>
 
 using EntityID = std::uint32_t;
@@ -19,25 +19,26 @@ private:
   std::map<EntityID, std::shared_ptr<Camera>> cameras{};
   std::map<EntityID, std::shared_ptr<Light>> lights{};
   std::map<EntityID, std::shared_ptr<Script>> scripts{};
-  std::map<EntityID, std::shared_ptr<void*>> custom_components{};
-	std::filesystem::path world_path;
+  std::map<EntityID, std::shared_ptr<void *>> custom_components{};
+  std::filesystem::path world_path;
 
 public:
   World(std::filesystem::path path) : world_path(path) {}
-	std::filesystem::path GetWorldPath() const { return world_path; }
-  std::map<EntityID, std::string>& GetMarkers();
-	// Creates a new entity and returns its ID
-	// Note: Adds a transform component after creating an entity
+  std::filesystem::path GetWorldPath() const { return world_path; }
+  std::map<EntityID, std::string> &GetMarkers();
+  // Creates a new entity and returns its ID
+  // Note: Adds a transform component after creating an entity
   EntityID CreateEntity();
   void DestroyEntity(EntityID entity);
   EntityID GetNextEntityID() const { return next_id; }
 
-  template <typename T> std::map<EntityID, std::shared_ptr<T>> &GetComponentSet();
+  template <typename T>
+  std::map<EntityID, std::shared_ptr<T>> &GetComponentSet();
 
   template <typename T> std::shared_ptr<T> NewComponent(EntityID entity) {
     GetComponentSet<T>().insert({entity, std::make_shared<T>()});
     return GetComponentSet<T>().at(entity);
-	}
+  }
 
   template <typename T> std::shared_ptr<T> GetComponent(EntityID entity) {
     auto it = GetComponentSet<T>().find(entity);

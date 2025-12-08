@@ -26,6 +26,6 @@ struct BasePipeline {
 
   std::shared_ptr<GPUData> screen_data;
 
-  void Render(std::shared_ptr<World> world, const PipelineSettings& settings);
+  void Render(std::shared_ptr<World> world, const PipelineSettings &settings);
   BasePipeline();
 };

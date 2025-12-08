@@ -1,43 +1,49 @@
 #include "ion/world.h"
 
-template <> std::map<EntityID, std::shared_ptr<Transform>> &World::GetComponentSet<Transform>() {
+template <>
+std::map<EntityID, std::shared_ptr<Transform>> &
+World::GetComponentSet<Transform>() {
   return transforms;
 }
 
 template <>
-std::map<EntityID, std::shared_ptr<Renderable>> &World::GetComponentSet<Renderable>() {
+std::map<EntityID, std::shared_ptr<Renderable>> &
+World::GetComponentSet<Renderable>() {
   return renderables;
 }
 
 template <>
-std::map<EntityID, std::shared_ptr<PhysicsBody>> &World::GetComponentSet<PhysicsBody>() {
+std::map<EntityID, std::shared_ptr<PhysicsBody>> &
+World::GetComponentSet<PhysicsBody>() {
   return physics_bodies;
 }
 
-template <> std::map<EntityID, std::shared_ptr<Camera>> &World::GetComponentSet<Camera>() {
+template <>
+std::map<EntityID, std::shared_ptr<Camera>> &World::GetComponentSet<Camera>() {
   return cameras;
 }
 
-template <> std::map<EntityID, std::shared_ptr<Light>> &World::GetComponentSet<Light>() {
+template <>
+std::map<EntityID, std::shared_ptr<Light>> &World::GetComponentSet<Light>() {
   return lights;
 }
 
-template <> std::map<EntityID, std::shared_ptr<Script>> &World::GetComponentSet<Script>() {
+template <>
+std::map<EntityID, std::shared_ptr<Script>> &World::GetComponentSet<Script>() {
   return scripts;
 }
 
-template <> std::map<EntityID, std::shared_ptr<void*>>& World::GetComponentSet<void*>() {
+template <>
+std::map<EntityID, std::shared_ptr<void *>> &World::GetComponentSet<void *>() {
   return custom_components;
 }
 
-std::map<EntityID, std::string>& World::GetMarkers() {
-  return markers;
-}
+std::map<EntityID, std::string> &World::GetMarkers() { return markers; }
 
 EntityID World::CreateEntity() {
   auto id = next_id++;
-	NewComponent<Transform>(id);
-	return id;
+  NewComponent<Transform>(id);
+  return id;
 }
 
 void World::DestroyEntity(EntityID entity) {

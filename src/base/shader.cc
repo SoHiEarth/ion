@@ -2,6 +2,7 @@
 #include "ion/shader.h"
 #include "ion/error_code.h"
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -9,7 +10,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <filesystem>
 
 void Shader::Use() { glUseProgram(program); }
 unsigned int Shader::GetProgram() { return program; }
@@ -20,8 +20,7 @@ template <> int Shader::SetUniform<int>(std::string_view name, int value) {
   return 0;
 }
 
-template <>
-int Shader::SetUniform<float>(std::string_view name, float value) {
+template <> int Shader::SetUniform<float>(std::string_view name, float value) {
   auto loc = glGetUniformLocation(program, name.data());
   glUniform1f(loc, value);
   return 0;
@@ -64,7 +63,8 @@ std::string _ShaderInternalReadFile(std::filesystem::path path) {
   return data;
 }
 
-Shader::Shader(std::filesystem::path new_path, std::string_view new_id) : path(new_path), id(new_id) {
+Shader::Shader(std::filesystem::path new_path, std::string_view new_id)
+    : path(new_path), id(new_id) {
   unsigned int vertex, fragment;
   int success;
   std::array<char, OPENGL_LOG_SIZE> info_log;
@@ -79,7 +79,8 @@ Shader::Shader(std::filesystem::path new_path, std::string_view new_id) : path(n
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(vertex, info_log.size(), nullptr, info_log.data());
-    printf("Error while compiling vertex shader %ls\n", (path / "vs.glsl").c_str());
+    printf("Error while compiling vertex shader %s\n",
+           (path / "vs.glsl").c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", VERTEX_COMPILATION_FAIL);
   }
@@ -88,7 +89,8 @@ Shader::Shader(std::filesystem::path new_path, std::string_view new_id) : path(n
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
   if (!success) {
     glGetShaderInfoLog(fragment, 512, nullptr, info_log.data());
-		printf("Error while compiling fragment shader %ls\n", (path / "fs.glsl").c_str());
+    printf("Error while compiling fragment shader %s\n",
+           (path / "fs.glsl").c_str());
     printf("%s\n", info_log.data());
     printf("%d\n", FRAGMENT_COMPILATION_FAIL);
   }
