@@ -22,6 +22,7 @@ target_sources(ion-base PRIVATE
   src/base/defaults.cc
   src/base/shader.cc
   src/base/script.cc
+  src/base/systems.cc
   src/base/render.cc
   src/base/texture.cc
   src/base/physics.cc

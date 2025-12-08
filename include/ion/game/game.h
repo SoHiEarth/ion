@@ -3,7 +3,6 @@
 #include "ion/world.h"
 #include <memory>
 
-class ION_API GameSystem {
-public:
-	void Update(std::shared_ptr<World>& world);
+namespace ion::game {
+	ION_API void Update(std::shared_ptr<World>& world);
 };

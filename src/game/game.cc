@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 #include "ion/render.h"
 
-void GameSystem::Update(std::shared_ptr<World>& world) {
+void ion::game::Update(std::shared_ptr<World>& world) {
 	for (auto& [entity, marker] : world->GetMarkers()) {
 		if (marker == "player") {
 			auto transform = world->GetComponent<Transform>(entity);

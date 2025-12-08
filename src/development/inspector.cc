@@ -10,13 +10,21 @@
 #include "ion/development/package.h"
 #include "ion/development/id.h"
 #include <tinyfiledialogs/tinyfiledialogs.h>
+#include "ion/systems.h"
+#include "ion/physics.h"
+#include <map>
+
+constexpr const char* WORLD_INSPECTOR_KEY = "World Inspector";
+constexpr const char* ASSET_INSPECTOR_KEY = "Asset Inspector";
+constexpr const char* RENDER_SETTINGS_KEY = "Render Settings";
+constexpr const char* IO_INSPECTOR_KEY = "IO Settings";
+constexpr const char* SYSTEM_INSPECTOR_KEY = "Systems";
 
 namespace ion::dev::ui::internal {
-  bool render_settings_open = false;
-  bool asset_inspector_open = false;
+  std::map<std::string, bool> inspector_state;
 }
 
-std::vector<std::string> SplitString(const std::string& str, char delimiter) {
+static std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   std::vector<std::string> tokens;
   std::string token;
   std::istringstream tokenStream(str);
@@ -26,7 +34,15 @@ std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   return tokens;
 }
 
-void MainMenuBar() {
+static std::map<int, std::filesystem::path> GetWorldPaths() {
+  std::map<int, std::filesystem::path> world_paths;
+  for (const auto& [id, world] : ion::res::GetWorlds()) {
+		world_paths.insert({ world_paths.size(), world->GetWorldPath() });
+  }
+  return world_paths;
+}
+
+static void MainMenuBar() {
   ImGui::BeginMainMenuBar();
   if (ImGui::BeginMenu("File")) {
     if (ImGui::MenuItem("Exit")) {
@@ -35,68 +51,64 @@ void MainMenuBar() {
 		ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("View")) {
-    if (ImGui::MenuItem("Render Settings")) {
-      ion::dev::ui::internal::render_settings_open = true;
+    for (auto& [key, state] : ion::dev::ui::internal::inspector_state) {
+      if (ImGui::MenuItem(key.c_str())) {
+        state = !state;
+      }
     }
-    if (ImGui::MenuItem("Asset Inspector")) {
-      ion::dev::ui::internal::asset_inspector_open = true;
-		}
 		ImGui::EndMenu();
   }
   ImGui::EndMainMenuBar();
 }
 
-void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
-  ImGui::Begin("World");
-  static std::map<int, std::filesystem::path> all_worlds;
-  if (ImGui::CollapsingHeader("IO", ImGuiTreeNodeFlags_DefaultOpen)) {
-    if (ImGui::CollapsingHeader("All Worlds", ImGuiTreeNodeFlags_DefaultOpen)) {
-      bool current_world_found = false;
-      for (auto& [index, path] : all_worlds) {
-        if (path == world->GetWorldPath()) current_world_found = true;
-        auto path_str = path.string();
-        if (ImGui::InputText(std::format("{}", index).c_str(), &path_str)) {
-          path = path_str;
-        }
-      }
-      if (!current_world_found) {
-        all_worlds.insert({ static_cast<int>(all_worlds.size()), world->GetWorldPath() });
-      }
-    }
-    if (ImGui::Button("Load")) {
-      auto path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
-      if (path) {
-        auto new_world = ion::res::LoadAsset<World>(path, false);
-        std::swap(world, new_world);
-      }
-    }
+static void IOInspector(std::shared_ptr<World>& world) {
+  ImGui::Begin("IO Settings");
+  ImGui::SeparatorText("All Worlds");
+  for (auto& [id, unloaded_world] : ion::res::GetWorlds()) {
+		ImGui::Text("Path: %s", unloaded_world->GetWorldPath().c_str());
 		ImGui::SameLine();
-    if (ImGui::Button("Save")) {
-      auto path = tinyfd_saveFileDialog("Save World", nullptr, 0, nullptr, nullptr);
-      if (path) {
-				ion::res::SaveAsset(path, world);
-      }
-		}
-    ImGui::SameLine();
-    if (ImGui::Button("Package & Ship")) {
-      auto path = tinyfd_selectFolderDialog("Select Output Directory", nullptr);
-      if (path) {
-        auto package_data = ion::dev::PackageData{
-          all_worlds,
-          path
-        };
-        ion::dev::Packer::CreatePackaged(package_data);
-      }
+    if (ImGui::Button("Remove")) {
+      ion::res::GetWorlds().erase(id);
+			break;
     }
   }
 
+  if (ImGui::Button("Load")) {
+    auto path = tinyfd_openFileDialog("Open World", nullptr, 0, nullptr, nullptr, false);
+    if (path) {
+      auto new_world = ion::res::LoadAsset<World>(path, false);
+      std::swap(world, new_world);
+    }
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Save")) {
+    auto path = tinyfd_saveFileDialog("Save World", nullptr, 0, nullptr, nullptr);
+    if (path) {
+      ion::res::SaveAsset(path, world);
+    }
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Package")) {
+    auto path = tinyfd_selectFolderDialog("Select Output Directory", nullptr);
+    if (path) {
+      auto package_data = ion::dev::PackageData{
+        GetWorldPaths(),
+        path
+      };
+      ion::dev::Packer::CreatePackaged(package_data);
+    }
+  }
+	ImGui::End();
+}
+
+static void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
+  ImGui::Begin("World");
   if (ImGui::CollapsingHeader("Utilities", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::Button("Create Entity")) {
       world->CreateEntity();
     }
-
-    static EntityID selected_entity;
     ImGui::SameLine();
+    static EntityID selected_entity;
     if (ImGui::Button("Add Marker")) {
       ImGui::OpenPopup("Add Marker");
 			selected_entity = -1;
@@ -141,7 +153,7 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
 
       ImGui::SeparatorText("Select Component");
       if (ImGui::Selectable("Physics Body") && selected_entity != -1) {
-        world->NewComponent<PhysicsBody>(selected_entity);
+				world->NewComponent<PhysicsBody>(selected_entity)->body_id = ion::physics::CreateBody(world->GetComponent<Transform>(selected_entity));
         ImGui::CloseCurrentPopup();
       }
       if (ImGui::Selectable("Renderable") && selected_entity != -1) {
@@ -171,12 +183,18 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
     }
   }
 
+	ImGui::SeparatorText("Entities");
+
   auto& transforms = world->GetComponentSet<Transform>();
   for (auto& [id, transform] : transforms) {
     ImGui::PushID(id);
     if (ImGui::CollapsingHeader(std::format("Entity {}", id).c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (world->GetMarkers().contains(id)) {
 				ImGui::InputText("Marker", &world->GetMarkers()[id]);
+				ImGui::SameLine();
+        if (ImGui::Button("Clear")) {
+          world->GetMarkers().erase(id);
+        }
       }
 
       if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -236,6 +254,18 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
             }
             ImGui::EndDragDropTarget();
 					}
+          ImGui::TreePop();
+        }
+      }
+      if (world->ContainsComponent<PhysicsBody>(id)) {
+        if (ImGui::TreeNode("Physics Body")) {
+          auto physics_body = world->GetComponent<PhysicsBody>(id);
+          ImGui::Checkbox("Enabled", &physics_body->enabled);
+					if (ion::physics::BodyIsValid(physics_body->body_id)) {
+            ImGui::TextColored({0.0, 1.0, 0.0, 1.0}, "Body ID is Valid.");
+          } else {
+            ImGui::TextColored({1.0, 0.0, 0.0, 1.0}, "Body ID is invalid.");
+          }
           ImGui::TreePop();
         }
       }
@@ -304,7 +334,7 @@ void WorldInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   ImGui::End();
 }
 
-void AssetInspector(std::shared_ptr<World>& world) {
+static void AssetInspector(std::shared_ptr<World>& world) {
   ImGui::Begin("Asset System");
 	ImGui::SeparatorText("Textures");
   if (ImGui::Button("Load Image")) {
@@ -382,7 +412,7 @@ void AssetInspector(std::shared_ptr<World>& world) {
   ImGui::End();
 }
 
-void RenderSettingInspector() {
+static void RenderSettingInspector() {
   ImGui::Begin("Render Settings");
   auto render_scale = ion::render::GetRenderScale();
   if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
@@ -395,14 +425,54 @@ void RenderSettingInspector() {
   ImGui::End();
 }
 
+static void SystemInspector() {
+	ImGui::Begin("Systems");
+  auto playing = ion::systems::GetState();
+  if (playing) {
+    if (ImGui::Button("Pause")) {
+      ion::systems::SetState(false);
+    }
+  }
+  else {
+    if (ImGui::Button("Play")) {
+      ion::systems::SetState(true);
+    }
+  }
+	ImGui::SeparatorText("Per-System State");
+  for (auto& system : ion::systems::GetSystems()) {
+    if (ImGui::Checkbox(system.name.c_str(), &system.enabled)) {
+			ion::systems::SetSystemEnabled(system.name, system.enabled);
+    }
+    switch (system.phase) {
+    case ion::systems::UpdatePhase::PRE_UPDATE: ImGui::Text("Phase: Pre-Update"); break;
+    case ion::systems::UpdatePhase::UPDATE: ImGui::Text("Phase: Update"); break;
+    case ion::systems::UpdatePhase::LATE_UPDATE: ImGui::Text("Phase: Late-Update"); break;
+    }
+    switch (system.condition) {
+    case ion::systems::UpdateCondition::ALWAYS: ImGui::Text("Condition: Always"); break;
+    case ion::systems::UpdateCondition::WHEN_PLAYING: ImGui::Text("Condition: When Playing"); break;
+    case ion::systems::UpdateCondition::WHEN_STOPPED: ImGui::Text("Condition: When Stopped"); break;
+    }
+	}
+  ImGui::End();
+}
+
 void ion::dev::ui::RenderInspector(std::shared_ptr<World>& world, Defaults& defaults) {
   ION_GUI_PREP_CONTEXT();
   MainMenuBar();
-  WorldInspector(world, defaults);
-  if (internal::asset_inspector_open) {
+  if (internal::inspector_state[WORLD_INSPECTOR_KEY]) {
+    WorldInspector(world, defaults);
+  }
+  if (internal::inspector_state[ASSET_INSPECTOR_KEY]) {
     AssetInspector(world);
   }
-  if (internal::render_settings_open) {
+  if (internal::inspector_state[RENDER_SETTINGS_KEY]) {
     RenderSettingInspector();
   }
+  if (internal::inspector_state[SYSTEM_INSPECTOR_KEY]) {
+    SystemInspector();
+  }
+  if (internal::inspector_state[IO_INSPECTOR_KEY]) {
+    IOInspector(world);
+	}
 }

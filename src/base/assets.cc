@@ -11,6 +11,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "ion/gpu_data.h"
 #include "ion/render.h"
+#include "ion/physics.h"
 #include "ion/development/id.h"
 #include "stb_image.h"
 #include "ion/save_keys.h"
@@ -62,6 +63,11 @@ static void ProcessWorldManifest(std::shared_ptr<World> world) {
       renderable->normal = ion::res::LoadAsset<Texture>(renderable_node.attribute(ION_SAVE_RENDERABLE_NORMAL).as_string());
       renderable->shader = ion::res::LoadAsset<Shader>(renderable_node.attribute(ION_SAVE_RENDERABLE_SHADER).as_string());
       renderable->data = ion::res::LoadAsset<GPUData>(renderable_node.attribute(ION_SAVE_RENDERABLE_GPU_DATA).as_string());
+    }
+		else if (type == ION_SAVE_PHYSICS_BODY_KEY) {
+      auto physics_body = world->NewComponent<PhysicsBody>(id);
+      auto physics_node = component_node.child(ION_SAVE_PHYSICS_BODY_KEY);
+			physics_body->body_id = ion::physics::CreateBody(world->GetComponent<Transform>(id));
     }
     else if (type == ION_SAVE_LIGHT_KEY) {
       auto light = world->NewComponent<Light>(id);
@@ -193,6 +199,12 @@ template <> ION_API void ion::res::SaveAsset(std::filesystem::path path, std::sh
     renderable_node.append_attribute(ION_SAVE_RENDERABLE_SHADER) = renderable->shader->GetID().c_str();
 		renderable_node.append_attribute(ION_SAVE_RENDERABLE_GPU_DATA) = renderable->data->GetID().c_str();
   }
+  for (const auto& [entity_id, physics_body] : asset->GetComponentSet<PhysicsBody>()) {
+    auto component_node = root.append_child(ION_SAVE_COMPONENT_KEY);
+    component_node.append_attribute(ION_SAVE_COMPONENT_TYPE) = ION_SAVE_PHYSICS_BODY_KEY;
+    component_node.append_attribute(ION_SAVE_ENTITY_ID) = entity_id;
+    auto physics_node = component_node.append_child(ION_SAVE_PHYSICS_BODY_KEY);
+	}
   for (const auto& [entity_id, light] : asset->GetComponentSet<Light>()) {
     auto component_node = root.append_child(ION_SAVE_COMPONENT_KEY);
     component_node.append_attribute(ION_SAVE_COMPONENT_TYPE) = ION_SAVE_LIGHT_KEY;

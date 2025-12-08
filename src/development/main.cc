@@ -14,6 +14,7 @@
 #include "ion/development/inspector.h"
 #include "ion/development/gui.h"
 #include "ion/development/startwindow.h"
+#include "ion/systems.h"
 #include "ion/game/game.h"
 #include "ion/base_pipeline.h"
 
@@ -45,6 +46,27 @@ static void SettingsInspector(PipelineSettings& settings) {
   ImGui::End();
 }
 
+static void RegisterAllSystems() {
+  ion::systems::RegisterSystem({
+    "Script System",
+    ion::systems::UpdatePhase::UPDATE,
+    ion::systems::UpdateCondition::WHEN_PLAYING,
+    ion::script::Update
+		});
+  ion::systems::RegisterSystem({
+    "Physics System",
+    ion::systems::UpdatePhase::UPDATE,
+    ion::systems::UpdateCondition::WHEN_PLAYING,
+    ion::physics::Update
+		});
+  ion::systems::RegisterSystem({
+    "Game System",
+    ion::systems::UpdatePhase::UPDATE,
+    ion::systems::UpdateCondition::WHEN_PLAYING,
+    ion::game::Update
+   });
+}
+
 int main() {
   if (!ion::res::CheckApplicationStructure()) {
     printf("Failed to verify application files.\n");
@@ -52,13 +74,13 @@ int main() {
   }
   try {
     Init();
+    RegisterAllSystems();
   }
   catch (std::exception& e) {
     printf("Init Error: %s\n", e.what());
 		return -1;
   }
 
-  auto game_system = GameSystem{};
   std::shared_ptr<World> world = nullptr;
 
   try {
@@ -76,15 +98,15 @@ int main() {
 
     while (!glfwWindowShouldClose(ion::render::GetWindow())) {
       glfwPollEvents();
+      ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
       ion::gui::NewFrame();
-      ion::script::Update(world);
-      ion::physics::Update();
-      game_system.Update(world);
       SettingsInspector(pipeline_settings);
       ion::dev::ui::RenderInspector(world, defaults);
+			ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
       ion::gui::Render();
       ion::render::Present();
+			ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::LATE_UPDATE);
     }
   }
   catch (std::exception& e) {

@@ -24,8 +24,6 @@ screen_vertices = {
   -1.0f,  1.0f,  0.0f,  1.0f
 };
 
-GameSystem game_system;
-
 const std::vector<unsigned int> indices = { 0, 1, 3, 1, 2, 3 };
 bool bloom_enable = true;
 
@@ -93,8 +91,8 @@ int main() {
   while (!glfwWindowShouldClose(ion::render::GetWindow())) {
     glfwPollEvents();
     ion::script::Update(world);
-    ion::physics::Update();
-    game_system.Update(world); 
+    ion::physics::Update(world);
+    ion::game::Update(world); 
 
     ion::render::BindFramebuffer(color_buffer);
     ion::render::Clear();
