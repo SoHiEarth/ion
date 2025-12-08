@@ -36,6 +36,15 @@ jobs:
           ~/.cache/vcpkg
           vcpkg_installed
         key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+        
+    - name: Cache builds directory
+      uses: actions/cache@v4
+      with:
+        path: builds
+        key: build-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: |
+          build-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
+          build-${{ runner.os }}-
 
     - uses: lukka/get-cmake@latest
 
