@@ -1,3 +1,4 @@
 # Ion Engine
-[![CMake + Vcpkg + Ninja on Windows](https://github.com/SoHiEarth/ion/actions/workflows/cmake-vcpkg-ninja.yml/badge.svg?branch=main)](https://github.com/SoHiEarth/ion/actions/workflows/cmake-vcpkg-ninja.yml)
+[![Linux Build](https://github.com/SoHiEarth/ion/actions/workflows/linux-build.yml/badge.svg)](https://github.com/SoHiEarth/ion/actions/workflows/linux-build.yml)
+[![Windows Build](https://github.com/SoHiEarth/ion/actions/workflows/windows-build.yml/badge.svg)](https://github.com/SoHiEarth/ion/actions/workflows/windows-build.yml)
 ![Preview](docs/preview.png "Preview")
