@@ -79,8 +79,8 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GH_TOKEN }}"
-        automatic_release_tag: "latest"
+        automatic_release_tag: "latest-linux"
         prerelease: true
-        title: "Pre-release build"
+        title: "Pre-release Build (Linux)"
         files: |
           builds/ninja-multi-vcpkg/Release/ion-latest-linux.zip
