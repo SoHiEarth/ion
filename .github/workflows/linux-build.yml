@@ -1,0 +1,88 @@
+name: Linux Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    - name: Cache vcpkg directory
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/vcpkg
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
+          vcpkg-${{ runner.os }}-
+    - name: Cache builds directory
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/builds
+        key: build-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: |
+          build-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-
+          build-${{ runner.os }}-
+
+    - uses: lukka/get-cmake@latest
+    
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgJsonGlob: "./vcpkg.json"
+
+    - name: Run CMake
+      uses: lukka/run-cmake@v10
+      with:
+        configurePreset: "ninja-multi-vcpkg"
+        buildPreset: "release"
+
+    - name: Create zip archive
+      run: |
+        releaseRel="builds/ninja-multi-vcpkg/Release"
+        zipFullPath="$releaseRel/ion-latest-linux.zip"
+        paths=()
+
+        ionExeRel="$releaseRel/ion-development"
+        if [[ -f "$ionExeRel" ]]; then
+          paths+=("$ionExeRel")
+        fi
+
+        libraries=$(find "$releaseRel" -type f -name "*.so")
+        if [[ ! -z "$libraries" ]]; then
+          for file in $libraries; do
+            paths+=("$file")
+          done
+        fi
+
+        if [[ -d "assets" ]]; then
+          paths+=("assets")
+        fi
+
+        if [[ ${#paths[@]} -eq 0 ]]; then
+          exit 1
+        fi
+
+        zip -r "$zipFullPath" "${paths[@]}"
+
+    - name: Release built file
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GH_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Pre-release build"
+        files: |
+          builds/ninja-multi-vcpkg/Release/ion-latest-linux.zip
