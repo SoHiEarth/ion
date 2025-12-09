@@ -14,6 +14,8 @@ BasePipeline::BasePipeline() {
       FramebufferInfo{.recreate_on_resize = true, .name = "Bloom"});
   bloom_buffer_2 = ion::render::CreateFramebuffer(
       FramebufferInfo{.recreate_on_resize = true, .name = "Bloom 2"});
+  output_buffer = ion::render::CreateFramebuffer(
+		FramebufferInfo{ .recreate_on_resize = true, .name = "Output" });
   deferred_shader =
       ion::res::LoadAsset<Shader>("assets/deferred_shader", false);
   screen_shader = ion::res::LoadAsset<Shader>("assets/screen_shader", false);
@@ -67,5 +69,12 @@ void BasePipeline::Render(std::shared_ptr<World> world,
     ion::render::RunPass(bloom_buffer, shaded, combine_shader, screen_data);
   }
 
-  ion::render::DrawFramebuffer(shaded, screen_shader, screen_data);
+  if (settings.render_to_output_buffer) {
+		ion::render::BindFramebuffer(output_buffer);
+    ion::render::Clear();
+    ion::render::DrawFramebuffer(shaded, screen_shader, screen_data, output_buffer);
+  }
+  else {
+    ion::render::DrawFramebuffer(shaded, screen_shader, screen_data);
+  }
 }

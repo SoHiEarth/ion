@@ -229,10 +229,20 @@ void ion::render::BindFramebuffer(std::shared_ptr<Framebuffer> framebuffer) {
 void ion::render::UnbindFramebuffer() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 void ion::render::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer,
                                   std::shared_ptr<Shader> shader,
-                                  std::shared_ptr<GPUData> quad) {
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glViewport(0, 0, static_cast<int>(r_config.window_size.x),
-             static_cast<int>(r_config.window_size.y));
+                                  std::shared_ptr<GPUData> quad,
+                                  std::shared_ptr<Framebuffer> final_buffer) {
+  if  (final_buffer) {
+    glBindFramebuffer(GL_FRAMEBUFFER, final_buffer->framebuffer);
+    glViewport(0, 0,
+               static_cast<int>(r_config.window_size.x) / r_config.render_scale,
+               static_cast<int>(r_config.window_size.y) /
+                   r_config.render_scale);
+  }
+  else {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, static_cast<int>(r_config.window_size.x),
+      static_cast<int>(r_config.window_size.y));
+  }  
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glDisable(GL_DEPTH_TEST);
   shader->Use();

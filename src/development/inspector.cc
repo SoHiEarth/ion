@@ -10,15 +10,28 @@
 #include "ion/world.h"
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
 #include <imgui_stdlib.h>
+#include <imgui_internal.h>
 #include <map>
 #include <tinyfiledialogs/tinyfiledialogs.h>
+#include "ion/base_pipeline.h"
 
+constexpr int BLOOM_STRENGTH_MIN = 1;
+constexpr int BLOOM_STRENGTH_MAX = 20;
 constexpr const char *WORLD_INSPECTOR_KEY = "World Inspector";
 constexpr const char *ASSET_INSPECTOR_KEY = "Asset Inspector";
 constexpr const char *RENDER_SETTINGS_KEY = "Render Settings";
 constexpr const char *IO_INSPECTOR_KEY = "IO Settings";
 constexpr const char *SYSTEM_INSPECTOR_KEY = "Systems";
+constexpr const char *FRAMEBUFFER_INSPECTOR_KEY = "Framebuffers";
+constexpr const char *VIEWPORT_INSPECTOR_KEY = "Viewport";
+constexpr ImVec2 FRAMEBUFFER_PREVIEW_SIZE = ImVec2(200, 200);
+constexpr ImVec2 FRAMEBUFFER_UV_0 = ImVec2(0, 1);
+constexpr ImVec2 FRAMEBUFFER_UV_1 = ImVec2(1, 0);
+constexpr float DOCK_LEFT_WIDTH= 0.3F;
+constexpr float DOCK_RIGHT_WIDTH= 0.3F;
+constexpr float DOCK_CENTER_WIDTH= 0.4F;
 
 namespace ion::dev::ui::internal {
 std::map<std::string, bool> inspector_state;
@@ -63,7 +76,7 @@ static void MainMenuBar() {
 }
 
 static void IOInspector(std::shared_ptr<World> &world) {
-  ImGui::Begin("IO Settings");
+  ImGui::Begin("IO");
   ImGui::SeparatorText("All Worlds");
   for (auto &[id, unloaded_world] : ion::res::GetWorlds()) {
     ImGui::Text("Path: %s", unloaded_world->GetWorldPath().c_str());
@@ -352,7 +365,7 @@ static void WorldInspector(std::shared_ptr<World> &world, Defaults &defaults) {
 }
 
 static void AssetInspector(std::shared_ptr<World> &world) {
-  ImGui::Begin("Asset System");
+  ImGui::Begin("Assets");
   ImGui::SeparatorText("Textures");
   if (ImGui::Button("Load Image")) {
     auto file_char =
@@ -435,7 +448,7 @@ static void AssetInspector(std::shared_ptr<World> &world) {
 }
 
 static void RenderSettingInspector() {
-  ImGui::Begin("Render Settings");
+  ImGui::Begin("Render");
   auto render_scale = ion::render::GetRenderScale();
   if (ImGui::DragInt("Render Scale", &render_scale, 1, 1, 16)) {
     ion::render::SetRenderScale(render_scale);
@@ -490,9 +503,89 @@ static void SystemInspector() {
   ImGui::End();
 }
 
+static void MinimalStateInspector() {
+  ImGui::Begin("State", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+	auto playing = ion::systems::GetState();
+	if (playing) {
+    if (ImGui::Button("Pause")) {
+      ion::systems::SetState(false);
+		}
+    } else {
+    if (ImGui::Button("Play")) {
+      ion::systems::SetState(true);
+		}
+	}
+  ImGui::End();
+}
+
+void FramebufferInspector(PipelineSettings& settings) {
+  ImGui::Begin("Framebuffers");
+  ImGui::Checkbox("Enable Bloom", &settings.bloom_enable);
+  ImGui::SliderInt("Bloom Strength", &settings.bloom_strength,
+    BLOOM_STRENGTH_MIN, BLOOM_STRENGTH_MAX);
+  for (auto& [buffer, name] : ion::render::GetFramebuffers()) {
+    ImGui::PushID(buffer->framebuffer);
+    ImGui::Image(buffer->colorbuffer, FRAMEBUFFER_PREVIEW_SIZE,
+      FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
+    ImGui::SameLine();
+    ImGui::TextUnformatted(name.c_str());
+    ImGui::PopID();
+  }
+  ImGui::End();
+}
+
+void ViewportInspector(BasePipeline& pipeline) {
+  ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoDecoration);
+	auto window_size = ImGui::GetWindowSize();
+  ImGui::Image(pipeline.output_buffer->colorbuffer, window_size,
+		FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
+  ImGui::End();
+}
+
 void ion::dev::ui::RenderInspector(std::shared_ptr<World> &world,
-                                   Defaults &defaults) {
+                                   Defaults &defaults, BasePipeline& pipeline, PipelineSettings& settings) {
   ION_GUI_PREP_CONTEXT();
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(viewport->Pos);
+  ImGui::SetNextWindowSize(viewport->Size);
+  ImGui::SetNextWindowViewport(viewport->ID);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0F);
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0F);
+  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+    ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+    ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoBackground;
+  ImGui::Begin("DockSpace_Window", nullptr, window_flags);
+  ImGui::PopStyleVar(2);
+  ImGuiID dockspace_id = ImGui::GetID("DockSpace");
+  ImGui::DockSpace(dockspace_id, ImVec2(0.0F, 0.0F));
+  ImGui::End();
+  static bool first_dock_layout = true;
+  if (first_dock_layout) {
+    first_dock_layout = false;
+    ImGui::DockBuilderRemoveNode(dockspace_id);
+    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+    ImGuiID dock_main_id = dockspace_id;
+    ImGuiID dock_id_top = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Up,
+			0.1F, nullptr, &dock_main_id);
+    ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down,
+      DOCK_CENTER_WIDTH, nullptr, &dock_main_id);
+    ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, DOCK_LEFT_WIDTH,
+      nullptr, &dock_main_id);
+    ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right,
+      DOCK_RIGHT_WIDTH, nullptr, &dock_main_id);
+    ImGui::DockBuilderDockWindow("Viewport", dock_main_id);
+    ImGui::DockBuilderDockWindow("World", dock_id_left);
+    ImGui::DockBuilderDockWindow("Render", dock_id_right);
+    ImGui::DockBuilderDockWindow("IO", dock_id_bottom);
+    ImGui::DockBuilderDockWindow("Assets", dock_id_bottom);
+    ImGui::DockBuilderDockWindow("Framebuffers", dock_id_bottom);
+		ImGui::DockBuilderDockWindow("Systems", dock_id_bottom);
+    ImGui::DockBuilderDockWindow("State", dock_id_top);
+    ImGui::DockBuilderFinish(dockspace_id);
+  }
+
   MainMenuBar();
   if (internal::inspector_state[WORLD_INSPECTOR_KEY]) {
     WorldInspector(world, defaults);
@@ -509,4 +602,11 @@ void ion::dev::ui::RenderInspector(std::shared_ptr<World> &world,
   if (internal::inspector_state[IO_INSPECTOR_KEY]) {
     IOInspector(world);
   }
+  if (internal::inspector_state[FRAMEBUFFER_INSPECTOR_KEY]) {
+    FramebufferInspector(settings);
+	}
+  if (internal::inspector_state[VIEWPORT_INSPECTOR_KEY]) {
+    ViewportInspector(pipeline);
+	}
+	MinimalStateInspector();
 }

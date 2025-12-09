@@ -6,8 +6,9 @@ struct GPUData;
 struct World;
 
 struct PipelineSettings {
-  bool bloom_enable = false;
+  bool bloom_enable = true;
   int bloom_strength = 10;
+  bool render_to_output_buffer = false;
 };
 
 struct BasePipeline {
@@ -16,6 +17,8 @@ struct BasePipeline {
   std::shared_ptr<Framebuffer> shaded;
   std::shared_ptr<Framebuffer> bloom_buffer;
   std::shared_ptr<Framebuffer> bloom_buffer_2;
+
+	std::shared_ptr<Framebuffer> output_buffer;
 
   std::shared_ptr<Shader> deferred_shader;
   std::shared_ptr<Shader> screen_shader;

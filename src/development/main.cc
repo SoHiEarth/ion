@@ -18,34 +18,12 @@
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <vector>
 
-constexpr int BLOOM_STRENGTH_MIN = 1;
-constexpr int BLOOM_STRENGTH_MAX = 20;
-constexpr ImVec2 FRAMEBUFFER_PREVIEW_SIZE = ImVec2(200, 200);
-constexpr ImVec2 FRAMEBUFFER_UV_0 = ImVec2(0, 1);
-constexpr ImVec2 FRAMEBUFFER_UV_1 = ImVec2(1, 0);
-
 static void Init() {
   ion::render::Init();
   ion::gui::Init(ion::render::GetWindow());
   ION_GUI_PREP_CONTEXT();
   ion::physics::Init();
   ion::script::Init();
-}
-
-static void SettingsInspector(PipelineSettings &settings) {
-  ImGui::Begin("Framebuffers");
-  ImGui::Checkbox("Enable Bloom", &settings.bloom_enable);
-  ImGui::SliderInt("Bloom Strength", &settings.bloom_strength,
-                   BLOOM_STRENGTH_MIN, BLOOM_STRENGTH_MAX);
-  for (auto &[buffer, name] : ion::render::GetFramebuffers()) {
-    ImGui::PushID(buffer->framebuffer);
-    ImGui::Image(buffer->colorbuffer, FRAMEBUFFER_PREVIEW_SIZE,
-                 FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
-    ImGui::SameLine();
-    ImGui::TextUnformatted(name.c_str());
-    ImGui::PopID();
-  }
-  ImGui::End();
 }
 
 static void RegisterAllSystems() {
@@ -84,6 +62,7 @@ int main() {
 
   try {
     auto pipeline_settings = PipelineSettings{};
+    pipeline_settings.render_to_output_buffer = true;
     auto pipeline = BasePipeline{};
     auto defaults = Defaults{};
 
@@ -91,10 +70,11 @@ int main() {
       glfwPollEvents();
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
       ion::gui::NewFrame();
-      SettingsInspector(pipeline_settings);
-      ion::dev::ui::RenderInspector(world, defaults);
+      ion::dev::ui::RenderInspector(world, defaults, pipeline, pipeline_settings);
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
+      ion::render::UnbindFramebuffer();
+      ion::render::Clear();
       ion::gui::Render();
       ion::render::Present();
       ion::systems::UpdateSystems(world,

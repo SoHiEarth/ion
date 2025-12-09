@@ -14,7 +14,6 @@ void ion::physics::Init() {
 }
 
 void ion::physics::Update(std::shared_ptr<World> &world) {
-  printf("Physics Update\n");
   // Before update. Sync transforms --> physics bodies.
   for (auto &[entity, physics_body] : world->GetComponentSet<PhysicsBody>()) {
     if (physics_body->enabled && b2Body_IsValid(physics_body->body_id)) {
@@ -34,10 +33,6 @@ void ion::physics::Update(std::shared_ptr<World> &world) {
               b2Body_GetRotation(physics_body->body_id));
           // Set speed to zero to prevent motion after transform change
           b2Body_SetLinearVelocity(physics_body->body_id, b2Vec2(0.0, 0.0));
-          printf("Entity Transform Sync: ID %u, Position (%.2f, %.2f), "
-                 "Rotation %.2f\n",
-                 entity, transform->position.x, transform->position.y,
-                 transform->rotation);
         }
       }
     }
