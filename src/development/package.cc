@@ -90,7 +90,7 @@ void CopyRunner(std::filesystem::path output) {
         dll_entry.path(), output / dll_entry.path().filename(),
         std::filesystem::copy_options::overwrite_existing);
       printf("Copied %s to %s\n", dll_entry.path().filename().string().c_str(),
-        std::filesystem::path(TOOLS_RUNNER_LOCATION).parent_path());
+        std::filesystem::path(TOOLS_RUNNER_LOCATION).parent_path().string().c_str());
     }
   }
 }
