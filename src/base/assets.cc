@@ -147,17 +147,17 @@ ION_API bool ion::res::CheckApplicationStructure() {
     auto response = getchar();
     if (response == 'y') {
       auto dir = tinyfd_selectFolderDialog("Select Assets Directory", nullptr);
-      if (dir) {
+      if (std::filesystem::exists({dir})) {
         std::filesystem::create_directory("assets");
-        for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
           if (entry.is_directory()) {
             std::filesystem::create_directory("assets" /
-                                              entry.path().filename());
+              entry.path().filename());
           }
           std::filesystem::copy(
-              entry.path(), "assets" / entry.path().filename(),
-              std::filesystem::copy_options::recursive |
-                  std::filesystem::copy_options::update_existing);
+            entry.path(), "assets" / entry.path().filename(),
+            std::filesystem::copy_options::recursive |
+            std::filesystem::copy_options::update_existing);
         }
       } else {
         return false;

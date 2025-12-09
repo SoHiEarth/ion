@@ -91,7 +91,3 @@ target_link_libraries(ion-run PRIVATE
     ion-base
     ion-game
 )
-set_target_properties(ion-run PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/assets/tools/run
-  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/assets/tools/run
-)

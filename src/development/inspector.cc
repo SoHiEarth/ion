@@ -79,7 +79,7 @@ static void IOInspector(std::shared_ptr<World> &world) {
   ImGui::Begin("IO");
   ImGui::SeparatorText("All Worlds");
   for (auto &[id, unloaded_world] : ion::res::GetWorlds()) {
-    ImGui::Text("Path: %s", unloaded_world->GetWorldPath().c_str());
+    ImGui::Text("Path: %s", unloaded_world->GetWorldPath().string().c_str());
     ImGui::SameLine();
     if (ImGui::Button("Remove")) {
       ion::res::GetWorlds().erase(id);
