@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <vector>
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 VkSurfaceFormatKHR
