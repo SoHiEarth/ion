@@ -1,6 +1,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include "ion/render.h"
 #include "ion/render/api.h"
+#include <stdexcept>
 #include <GLFW/glfw3.h>
 
 void ion::render::api::CreateSurface() {
