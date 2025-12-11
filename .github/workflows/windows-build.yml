@@ -1,10 +1,10 @@
-name: Windows Build
+name: Windows Build (Vulkan)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "vulkan" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "vulkan" ]
 
 jobs:
   build:
@@ -84,8 +84,8 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GH_TOKEN }}"
-        automatic_release_tag: "latest-windows"
+        automatic_release_tag: "latest-windows-vulkan"
         prerelease: true
-        title: "Pre-release Build (Windows)"
+        title: "Pre-release Build (Windows, Vulkan Branch)"
         files: |
-          builds/ninja-multi-vcpkg/Release/ion-latest-windows.zip
+          builds/ninja-multi-vcpkg/Release/ion-latest-windows-vulkan.zip

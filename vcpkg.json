@@ -12,10 +12,10 @@
         "docking-experimental",
         "freetype",
         "glfw-binding",
-        "opengl3-binding"
+        "vulkan-binding"
       ]
     },
-    "opengl",
+    "vulkan",
     "python3",
     "pugixml",
     "stb",

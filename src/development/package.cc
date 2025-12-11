@@ -1,20 +1,21 @@
 #include "ion/development/package.h"
 #include "ion/world.h"
 #include <fstream>
-#include <sstream>
 #include <pugixml.hpp>
+#include <sstream>
 #define TOOLS_RUNNER_DIRECTORY ""
 #define TOOLS_RUNNER_LOCATION "ion-run.exe"
 
 void ion::dev::internal::PackInfo::Write(const std::filesystem::path &path) {
-	pugi::xml_document doc;
-	auto root = doc.append_child("worlds");
-  for (const auto& [id, world_path] : worlds) {
+  pugi::xml_document doc;
+  auto root = doc.append_child("worlds");
+  for (const auto &[id, world_path] : worlds) {
     auto world_node = root.append_child("world");
     world_node.append_attribute("id") = id;
-    world_node.append_attribute("path") = ("assets" / world_path.filename()).string().c_str();
-	}
-	doc.save_file(path.string().c_str());
+    world_node.append_attribute("path") =
+        ("assets" / world_path.filename()).string().c_str();
+  }
+  doc.save_file(path.string().c_str());
 }
 
 void PrepareDirectory(std::filesystem::path path) {
@@ -83,14 +84,19 @@ void CopyRunner(std::filesystem::path output) {
   }
   std::filesystem::copy_file(TOOLS_RUNNER_LOCATION, output / "ion-run.exe",
                              std::filesystem::copy_options::overwrite_existing);
-  std::filesystem::directory_iterator dll_iter(std::filesystem::absolute(std::filesystem::path(TOOLS_RUNNER_LOCATION)).parent_path());
-  for (const auto& dll_entry : dll_iter) {
+  std::filesystem::directory_iterator dll_iter(
+      std::filesystem::absolute(std::filesystem::path(TOOLS_RUNNER_LOCATION))
+          .parent_path());
+  for (const auto &dll_entry : dll_iter) {
     if (dll_entry.path().extension() == ".dll") {
       std::filesystem::copy_file(
-        dll_entry.path(), output / dll_entry.path().filename(),
-        std::filesystem::copy_options::overwrite_existing);
+          dll_entry.path(), output / dll_entry.path().filename(),
+          std::filesystem::copy_options::overwrite_existing);
       printf("Copied %s to %s\n", dll_entry.path().filename().string().c_str(),
-        std::filesystem::path(TOOLS_RUNNER_LOCATION).parent_path().string().c_str());
+             std::filesystem::path(TOOLS_RUNNER_LOCATION)
+                 .parent_path()
+                 .string()
+                 .c_str());
     }
   }
 }

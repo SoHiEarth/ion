@@ -6,7 +6,7 @@ find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(ImGui CONFIG REQUIRED)
-find_package(OpenGL REQUIRED)
+find_package(Vulkan REQUIRED)
 find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Development REQUIRED)
@@ -27,6 +27,13 @@ target_sources(ion-base PRIVATE
   src/base/texture.cc
   src/base/physics.cc
   src/base/world.cc
+  src/base/render/api.cc
+  src/base/render/debug.cc
+  src/base/render/devices.cc
+  src/base/render/instance.cc
+  src/base/render/surface.cc
+  src/base/render/swapchain.cc
+  src/base/render/image_views.cc
 )
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION})
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION_MAJOR})
@@ -37,7 +44,7 @@ target_link_libraries(ion-base PUBLIC
     glfw
     glm::glm
     imgui::imgui
-    OpenGL::GL
+    Vulkan::Vulkan
     tinyfiledialogs::tinyfiledialogs
     Python3::Python
     pugixml::pugixml

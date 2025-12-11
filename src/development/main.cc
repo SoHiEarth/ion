@@ -70,7 +70,8 @@ int main() {
       glfwPollEvents();
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
       ion::gui::NewFrame();
-      ion::dev::ui::RenderInspector(world, defaults, pipeline, pipeline_settings);
+      ion::dev::ui::RenderInspector(world, defaults, pipeline,
+                                    pipeline_settings);
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
       ion::render::UnbindFramebuffer();

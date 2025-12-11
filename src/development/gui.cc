@@ -1,9 +1,8 @@
 #include "ion/development/gui.h"
-#include <functional>
+#include "ion/render/api.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-#include <memory>
+#include <imgui_impl_vulkan.h>
 
 static ImGuiContext *g_SharedImGuiContext = nullptr;
 void *ion_gui_alloc(size_t size, void *user_data) { return malloc(size); }
@@ -19,11 +18,11 @@ void ion::gui::Init(GLFWwindow *window) {
   ImGui::SetAllocatorFunctions(ion_gui_alloc, ion_gui_free, user_data);
   g_SharedImGuiContext = ImGui::CreateContext();
   ImGui::SetCurrentContext(g_SharedImGuiContext);
-  ImGuiIO& imgui_io = ImGui::GetIO();
+  ImGuiIO &imgui_io = ImGui::GetIO();
   imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   imgui_io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   imgui_io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
-  ImGuiStyle& style = ImGui::GetStyle();
+  ImGuiStyle &style = ImGui::GetStyle();
   style.WindowRounding = GUI_ROUNDING_MORE;
   style.ChildRounding = GUI_ROUNDING_MORE;
   style.FrameRounding = GUI_ROUNDING_LESS;
@@ -31,26 +30,28 @@ void ion::gui::Init(GLFWwindow *window) {
   style.ScrollbarRounding = GUI_ROUNDING_LESS;
   style.GrabRounding = GUI_ROUNDING_LESS;
   style.TabRounding = GUI_ROUNDING_LESS;
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init("#version 150");
+  ImGui_ImplGlfw_InitForVulkan(window, true);
+  auto info = ImGui_ImplVulkan_InitInfo{};
+  info.Instance = ion::render::api::internal::instance;
+  ImGui_ImplVulkan_Init(&info);
 }
 
 void ion::gui::NewFrame() {
   ImGui::SetCurrentContext(g_SharedImGuiContext);
-  ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
+  ImGui_ImplVulkan_NewFrame();
   ImGui::NewFrame();
 }
 
 void ion::gui::Render() {
   ImGui::SetCurrentContext(g_SharedImGuiContext);
   ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), nullptr);
 }
 
 void ion::gui::Quit() {
   ImGui::SetCurrentContext(g_SharedImGuiContext);
-  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplVulkan_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext(g_SharedImGuiContext);
   g_SharedImGuiContext = nullptr;

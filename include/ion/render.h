@@ -1,13 +1,12 @@
 #pragma once
 #include "component.h"
-#include "gpu_data.h"
-// #include <GLFW/glfw3.h>
 #include "exports.h"
+#include "gpu_data.h"
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
 struct Transform;
 struct Texture;
@@ -63,7 +62,8 @@ void UpdateFramebuffers();
 void BindFramebuffer(std::shared_ptr<Framebuffer>);
 void UnbindFramebuffer();
 void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>,
-                     std::shared_ptr<GPUData> quad, std::shared_ptr<Framebuffer> = nullptr);
+                     std::shared_ptr<GPUData> quad,
+                     std::shared_ptr<Framebuffer> = nullptr);
 const std::map<std::shared_ptr<Framebuffer>, std::string> &GetFramebuffers();
 
 void BindTexture(std::shared_ptr<Texture> texture, int slot);
