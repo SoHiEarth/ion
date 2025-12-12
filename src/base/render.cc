@@ -63,6 +63,12 @@ int ion::render::Init() {
   api::CreateDevice();
   api::CreateSwapchain();
   api::CreateImageViews();
+  api::CreateRenderPass();
+  api::CreatePipeline();
+  api::CreateFramebuffers();
+  api::CreateCommandPool();
+  api::CreateCommandBuffer();
+  api::CreateSyncObjects();
 
   glfwSetFramebufferSizeCallback(internal::window, SizeCallback);
   return 0;
@@ -256,12 +262,9 @@ int ion::render::Render(std::shared_ptr<Framebuffer> color_fb,
   return 0;
 }
 int ion::render::Quit() {
-  for (auto &[framebuffer, name] : internal::framebuffers) {
-  }
-  internal::framebuffers.clear();
   api::Quit();
   glfwDestroyWindow(internal::window);
   glfwTerminate();
   return 0;
 }
-void ion::render::Present() {}
+void ion::render::Present() { api::Render(); }

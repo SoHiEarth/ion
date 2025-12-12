@@ -50,6 +50,14 @@ extern std::vector<VkImageView> swapchain_image_views;
 extern std::vector<VkImage> swapchain_images;
 extern VkFormat swapchain_image_format;
 extern VkExtent2D swapchain_extent;
+extern VkRenderPass render_pass;
+extern VkPipelineLayout pipeline_layout;
+extern VkPipeline graphics_pipeline;
+extern std::vector<VkFramebuffer> swapchain_framebuffers;
+extern VkCommandPool command_pool;
+extern VkCommandBuffer command_buffer;
+extern VkSemaphore image_available_semaphore, render_finished_semaphore;
+extern VkFence in_flight_fence;
 } // namespace internal
 
 void CreateInstance();
@@ -58,6 +66,15 @@ void CreateSurface();
 void CreateDevice();
 void CreateSwapchain();
 void CreateImageViews();
+void CreatePipeline();
+void CreateRenderPass();
+void CreateFramebuffers();
+void CreateSyncObjects();
+void CreateCommandPool();
+void CreateCommandBuffer();
+
+void RecordCommandBuffer(VkCommandBuffer, uint32_t);
+void Render();
 
 void DestroyMessenger();
 void Quit();

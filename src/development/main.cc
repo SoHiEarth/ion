@@ -7,21 +7,17 @@
 #include "ion/physics.h"
 #include "ion/render.h"
 #include "ion/script.h"
-#include "ion/shader.h"
 #include "ion/systems.h"
-#include "ion/texture.h"
 #include "ion/world.h"
-#include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <tinyfiledialogs/tinyfiledialogs.h>
-#include <vector>
 
 static void Init() {
   ion::render::Init();
-  ion::gui::Init(ion::render::GetWindow());
-  ION_GUI_PREP_CONTEXT();
+  // ion::gui::Init(ion::render::GetWindow());
+  // ION_GUI_PREP_CONTEXT();
   ion::physics::Init();
   ion::script::Init();
 }
@@ -51,10 +47,10 @@ int main() {
     return -1;
   }
 
-  std::shared_ptr<World> world = nullptr;
+  std::shared_ptr<World> world = std::make_shared<World>("a");
 
   try {
-    world = ion::gui::StartWindow();
+    // world = ion::gui::StartWindow();
   } catch (std::exception &e) {
     printf("Start Window Error: %s\n", e.what());
     return -1;
@@ -69,14 +65,14 @@ int main() {
     while (!glfwWindowShouldClose(ion::render::GetWindow())) {
       glfwPollEvents();
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
-      ion::gui::NewFrame();
-      ion::dev::ui::RenderInspector(world, defaults, pipeline,
-                                    pipeline_settings);
+      // ion::gui::NewFrame();
+      //      ion::dev::ui::RenderInspector(world, defaults, pipeline,
+      //                                    pipeline_settings);
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
       ion::render::UnbindFramebuffer();
       ion::render::Clear();
-      ion::gui::Render();
+      // ion::gui::Render();
       ion::render::Present();
       ion::systems::UpdateSystems(world,
                                   ion::systems::UpdatePhase::LATE_UPDATE);
@@ -88,6 +84,6 @@ int main() {
   ion::physics::Quit();
   ion::script::Quit();
   ion::render::Quit();
-  ion::gui::Quit();
+  // ion::gui::Quit();
   return 0;
 }

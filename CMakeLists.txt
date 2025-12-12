@@ -28,12 +28,16 @@ target_sources(ion-base PRIVATE
   src/base/physics.cc
   src/base/world.cc
   src/base/render/api.cc
+  src/base/render/command.cc
   src/base/render/debug.cc
   src/base/render/devices.cc
+  src/base/render/framebuffers.cc
+  src/base/render/image_views.cc
   src/base/render/instance.cc
+  src/base/render/pipeline.cc
+  src/base/render/render_pass.cc
   src/base/render/surface.cc
   src/base/render/swapchain.cc
-  src/base/render/image_views.cc
 )
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION})
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION_MAJOR})
