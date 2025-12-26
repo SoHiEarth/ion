@@ -1,10 +1,10 @@
-name: Linux Build
+name: Linux Build (Vulkan)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "vulkan" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "vulkan" ]
 
 jobs:
   build:
@@ -88,8 +88,8 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GH_TOKEN }}"
-        automatic_release_tag: "latest-linux"
+        automatic_release_tag: "latest-linux-vulkan"
         prerelease: true
-        title: "Pre-release Build (Linux)"
+        title: "Pre-release Build (Linux, Vulkan)"
         files: |
-          builds/ninja-multi-vcpkg/Release/ion-latest-linux.zip
+          builds/ninja-multi-vcpkg/Release/ion-latest-linux-vulkan.zip

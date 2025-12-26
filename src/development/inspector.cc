@@ -1,5 +1,6 @@
 #include "ion/development/inspector.h"
 #include "ion/assets.h"
+#include "ion/base_pipeline.h"
 #include "ion/development/gui.h"
 #include "ion/development/id.h"
 #include "ion/development/package.h"
@@ -11,11 +12,10 @@
 #include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
-#include <imgui_stdlib.h>
 #include <imgui_internal.h>
+#include <imgui_stdlib.h>
 #include <map>
 #include <tinyfiledialogs/tinyfiledialogs.h>
-#include "ion/base_pipeline.h"
 
 constexpr int BLOOM_STRENGTH_MIN = 1;
 constexpr int BLOOM_STRENGTH_MAX = 20;
@@ -29,9 +29,9 @@ constexpr const char *VIEWPORT_INSPECTOR_KEY = "Viewport";
 constexpr ImVec2 FRAMEBUFFER_PREVIEW_SIZE = ImVec2(200, 200);
 constexpr ImVec2 FRAMEBUFFER_UV_0 = ImVec2(0, 1);
 constexpr ImVec2 FRAMEBUFFER_UV_1 = ImVec2(1, 0);
-constexpr float DOCK_LEFT_WIDTH= 0.3F;
-constexpr float DOCK_RIGHT_WIDTH= 0.3F;
-constexpr float DOCK_CENTER_WIDTH= 0.4F;
+constexpr float DOCK_LEFT_WIDTH = 0.3F;
+constexpr float DOCK_RIGHT_WIDTH = 0.3F;
+constexpr float DOCK_CENTER_WIDTH = 0.4F;
 
 namespace ion::dev::ui::internal {
 std::map<std::string, bool> inspector_state;
@@ -504,29 +504,31 @@ static void SystemInspector() {
 }
 
 static void MinimalStateInspector() {
-  ImGui::Begin("State", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
-	auto playing = ion::systems::GetState();
-	if (playing) {
+  ImGui::Begin("State", nullptr,
+               ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoTitleBar |
+                   ImGuiWindowFlags_NoCollapse);
+  auto playing = ion::systems::GetState();
+  if (playing) {
     if (ImGui::Button("Pause")) {
       ion::systems::SetState(false);
-		}
-    } else {
+    }
+  } else {
     if (ImGui::Button("Play")) {
       ion::systems::SetState(true);
-		}
-	}
+    }
+  }
   ImGui::End();
 }
 
-void FramebufferInspector(PipelineSettings& settings) {
+void FramebufferInspector(PipelineSettings &settings) {
   ImGui::Begin("Framebuffers");
   ImGui::Checkbox("Enable Bloom", &settings.bloom_enable);
   ImGui::SliderInt("Bloom Strength", &settings.bloom_strength,
-    BLOOM_STRENGTH_MIN, BLOOM_STRENGTH_MAX);
-  for (auto& [buffer, name] : ion::render::GetFramebuffers()) {
+                   BLOOM_STRENGTH_MIN, BLOOM_STRENGTH_MAX);
+  for (auto &[buffer, name] : ion::render::GetFramebuffers()) {
     ImGui::PushID(buffer->framebuffer);
     ImGui::Image(buffer->colorbuffer, FRAMEBUFFER_PREVIEW_SIZE,
-      FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
+                 FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
     ImGui::SameLine();
     ImGui::TextUnformatted(name.c_str());
     ImGui::PopID();
@@ -534,27 +536,30 @@ void FramebufferInspector(PipelineSettings& settings) {
   ImGui::End();
 }
 
-void ViewportInspector(BasePipeline& pipeline) {
+void ViewportInspector(BasePipeline &pipeline) {
   ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoDecoration);
-	auto window_size = ImGui::GetWindowSize();
+  auto window_size = ImGui::GetWindowSize();
   ImGui::Image(pipeline.output_buffer->colorbuffer, window_size,
-		FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
+               FRAMEBUFFER_UV_0, FRAMEBUFFER_UV_1);
   ImGui::End();
 }
 
 void ion::dev::ui::RenderInspector(std::shared_ptr<World> &world,
-                                   Defaults &defaults, BasePipeline& pipeline, PipelineSettings& settings) {
+                                   Defaults &defaults, BasePipeline &pipeline,
+                                   PipelineSettings &settings) {
   ION_GUI_PREP_CONTEXT();
-  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImGuiViewport *viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->Pos);
   ImGui::SetNextWindowSize(viewport->Size);
   ImGui::SetNextWindowViewport(viewport->ID);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0F);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0F);
-  ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
-    ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-    ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-    ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoBackground;
+  ImGuiWindowFlags window_flags =
+      ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar |
+      ImGuiWindowFlags_NoBackground;
   ImGui::Begin("DockSpace_Window", nullptr, window_flags);
   ImGui::PopStyleVar(2);
   ImGuiID dockspace_id = ImGui::GetID("DockSpace");
@@ -567,21 +572,21 @@ void ion::dev::ui::RenderInspector(std::shared_ptr<World> &world,
     ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
     ImGuiID dock_main_id = dockspace_id;
-    ImGuiID dock_id_top = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Up,
-			0.1F, nullptr, &dock_main_id);
-    ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down,
-      DOCK_CENTER_WIDTH, nullptr, &dock_main_id);
-    ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, DOCK_LEFT_WIDTH,
-      nullptr, &dock_main_id);
-    ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right,
-      DOCK_RIGHT_WIDTH, nullptr, &dock_main_id);
+    ImGuiID dock_id_top = ImGui::DockBuilderSplitNode(
+        dock_main_id, ImGuiDir_Up, 0.1F, nullptr, &dock_main_id);
+    ImGuiID dock_id_bottom = ImGui::DockBuilderSplitNode(
+        dock_main_id, ImGuiDir_Down, DOCK_CENTER_WIDTH, nullptr, &dock_main_id);
+    ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(
+        dock_main_id, ImGuiDir_Left, DOCK_LEFT_WIDTH, nullptr, &dock_main_id);
+    ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(
+        dock_main_id, ImGuiDir_Right, DOCK_RIGHT_WIDTH, nullptr, &dock_main_id);
     ImGui::DockBuilderDockWindow("Viewport", dock_main_id);
     ImGui::DockBuilderDockWindow("World", dock_id_left);
     ImGui::DockBuilderDockWindow("Render", dock_id_right);
     ImGui::DockBuilderDockWindow("IO", dock_id_bottom);
     ImGui::DockBuilderDockWindow("Assets", dock_id_bottom);
     ImGui::DockBuilderDockWindow("Framebuffers", dock_id_bottom);
-		ImGui::DockBuilderDockWindow("Systems", dock_id_bottom);
+    ImGui::DockBuilderDockWindow("Systems", dock_id_bottom);
     ImGui::DockBuilderDockWindow("State", dock_id_top);
     ImGui::DockBuilderFinish(dockspace_id);
   }
@@ -604,9 +609,9 @@ void ion::dev::ui::RenderInspector(std::shared_ptr<World> &world,
   }
   if (internal::inspector_state[FRAMEBUFFER_INSPECTOR_KEY]) {
     FramebufferInspector(settings);
-	}
+  }
   if (internal::inspector_state[VIEWPORT_INSPECTOR_KEY]) {
     ViewportInspector(pipeline);
-	}
-	MinimalStateInspector();
+  }
+  MinimalStateInspector();
 }

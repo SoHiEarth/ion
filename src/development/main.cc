@@ -7,16 +7,12 @@
 #include "ion/physics.h"
 #include "ion/render.h"
 #include "ion/script.h"
-#include "ion/shader.h"
 #include "ion/systems.h"
-#include "ion/texture.h"
 #include "ion/world.h"
-#include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <tinyfiledialogs/tinyfiledialogs.h>
-#include <vector>
 
 static void Init() {
   ion::render::Init();
@@ -51,10 +47,10 @@ int main() {
     return -1;
   }
 
-  std::shared_ptr<World> world = nullptr;
+  std::shared_ptr<World> world = std::make_shared<World>("a");
 
   try {
-    world = ion::gui::StartWindow();
+    // world = ion::gui::StartWindow();
   } catch (std::exception &e) {
     printf("Start Window Error: %s\n", e.what());
     return -1;
@@ -70,7 +66,8 @@ int main() {
       glfwPollEvents();
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
       ion::gui::NewFrame();
-      ion::dev::ui::RenderInspector(world, defaults, pipeline, pipeline_settings);
+           ion::dev::ui::RenderInspector(world, defaults, pipeline,
+                                         pipeline_settings);
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
       ion::render::UnbindFramebuffer();
@@ -86,7 +83,7 @@ int main() {
 
   ion::physics::Quit();
   ion::script::Quit();
-  ion::render::Quit();
   ion::gui::Quit();
+  ion::render::Quit();
   return 0;
 }

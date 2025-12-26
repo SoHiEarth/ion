@@ -6,15 +6,15 @@ find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(ImGui CONFIG REQUIRED)
-find_package(OpenGL REQUIRED)
+find_package(Vulkan REQUIRED)
 find_package(Stb REQUIRED)
 find_package(tinyfiledialogs CONFIG REQUIRED)
 find_package(Python3 COMPONENTS Development REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 
-add_library(ion-base SHARED)
+add_library(ion-base STATIC)
 target_compile_features(ion-base PRIVATE cxx_std_20)
-target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
+#target_compile_definitions(ion-base PRIVATE ION_EXPORTS)
 target_compile_definitions(ion-base PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-base PRIVATE
   src/base/assets.cc
@@ -27,6 +27,18 @@ target_sources(ion-base PRIVATE
   src/base/texture.cc
   src/base/physics.cc
   src/base/world.cc
+  src/development/id.cc
+  src/base/render/api.cc
+  src/base/render/command.cc
+  src/base/render/debug.cc
+  src/base/render/devices.cc
+  src/base/render/framebuffers.cc
+  src/base/render/image_views.cc
+  src/base/render/instance.cc
+  src/base/render/pipeline.cc
+  src/base/render/render_pass.cc
+  src/base/render/surface.cc
+  src/base/render/swapchain.cc
 )
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION})
 set_target_properties(ion-base PROPERTIES PRIVATE ${PROJECT_VERSION_MAJOR})
@@ -37,15 +49,15 @@ target_link_libraries(ion-base PUBLIC
     glfw
     glm::glm
     imgui::imgui
-    OpenGL::GL
+    Vulkan::Vulkan
     tinyfiledialogs::tinyfiledialogs
     Python3::Python
     pugixml::pugixml
 )
 
-add_library(ion-game SHARED)
+add_library(ion-game STATIC)
 target_compile_features(ion-game PRIVATE cxx_std_20)
-target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
+#target_compile_definitions(ion-game PRIVATE ION_EXPORTS)
 target_compile_definitions(ion-game PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION}")
 target_sources(ion-game PRIVATE
   src/game/game.cc
@@ -69,7 +81,7 @@ target_sources(ion-development PRIVATE
 target_compile_definitions(ion-development PRIVATE
   ION_BUILD_VERSION="${PROJECT_VERSION}"
   ION_DEVELOPMENT
-  ION_IMPORTS
+  #ION_IMPORTS
 )
 set_target_properties(ion-development PROPERTIES VERSION ${PROJECT_VERSION})
 target_include_directories(ion-development PRIVATE ${CMAKE_SOURCE_DIR}/include)
