@@ -43,7 +43,8 @@ std::vector<const char *> GetRequiredExtensions() {
 
 void ion::render::api::CreateInstance() {
   if (internal::enable_validation_layers && !CheckValidationLayerSupport()) {
-    throw std::runtime_error("Requested validation layers were not available.");
+    printf("Requested validation layers were not available.\n");
+    internal::using_fallback_layer = true;
   }
   auto app_info = VkApplicationInfo{};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -61,7 +62,7 @@ void ion::render::api::CreateInstance() {
   create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   create_info.ppEnabledExtensionNames = extensions.data();
 
-  if (internal::enable_validation_layers) {
+  if (internal::enable_validation_layers && !internal::using_fallback_layer) {
     create_info.enabledLayerCount = static_cast<uint32_t>(
         ion::render::api::internal::validation_layers.size());
     create_info.ppEnabledLayerNames =

@@ -3,7 +3,6 @@
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 
 namespace ion::render::api {
 
@@ -18,11 +17,14 @@ struct SwapchainSupportInfo {
 };
 
 namespace internal {
+const int max_frames_in_flight = 2;
+
 #ifdef NDEBUG
 static const bool enable_validation_layers = false;
 #else
 static const bool enable_validation_layers = true;
 #endif
+static bool using_fallback_layer = false;
 
 static const std::vector<const char *>
     validation_layers = {"VK_LAYER_KHRONOS_validation"},
@@ -55,9 +57,9 @@ extern VkPipelineLayout pipeline_layout;
 extern VkPipeline graphics_pipeline;
 extern std::vector<VkFramebuffer> swapchain_framebuffers;
 extern VkCommandPool command_pool;
-extern VkCommandBuffer command_buffer;
-extern VkSemaphore image_available_semaphore, render_finished_semaphore;
-extern VkFence in_flight_fence;
+extern std::vector<VkCommandBuffer> command_buffer;
+extern std::vector<VkSemaphore> image_available_semaphore, render_finished_semaphore;
+extern std::vector<VkFence> in_flight_fence;
 } // namespace internal
 
 void CreateInstance();

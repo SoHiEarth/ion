@@ -153,7 +153,7 @@ void ion::render::api::CreateDevice() {
       static_cast<uint32_t>(internal::device_extensions.size());
   info.ppEnabledExtensionNames = internal::device_extensions.data();
 
-  if (internal::enable_validation_layers) {
+  if (internal::enable_validation_layers && !internal::using_fallback_layer) {
     info.enabledLayerCount =
         static_cast<uint32_t>(internal::validation_layers.size());
     info.ppEnabledLayerNames = internal::validation_layers.data();
