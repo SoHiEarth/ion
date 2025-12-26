@@ -1,6 +1,7 @@
 #include "ion/render/api.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+#include <imgui_impl_vulkan.h>
 
 uint32_t current_rendering_frame = 0;
 
@@ -92,6 +93,8 @@ void ion::render::api::RecordCommandBuffer(VkCommandBuffer buffer,
 
   vkCmdDraw(buffer, 3, 1, 0, 0);
 
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
+
   vkCmdEndRenderPass(buffer);
   if (vkEndCommandBuffer(buffer) != VK_SUCCESS) {
     throw std::runtime_error("Failed to end command buffer");
@@ -108,7 +111,7 @@ void ion::render::api::Render() {
                         internal::image_available_semaphore[current_rendering_frame], VK_NULL_HANDLE,
                         &image_index);
   vkResetCommandBuffer(internal::command_buffer[current_rendering_frame], 0);
-  RecordCommandBuffer(internal::command_buffer[current_rendering_frame], 0);
+  RecordCommandBuffer(internal::command_buffer[current_rendering_frame], image_index);
 
   auto submit_info = VkSubmitInfo{};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

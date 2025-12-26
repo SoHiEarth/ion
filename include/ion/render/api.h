@@ -60,6 +60,8 @@ extern VkCommandPool command_pool;
 extern std::vector<VkCommandBuffer> command_buffer;
 extern std::vector<VkSemaphore> image_available_semaphore, render_finished_semaphore;
 extern std::vector<VkFence> in_flight_fence;
+
+extern VkDescriptorPool descriptor_pool;
 } // namespace internal
 
 void CreateInstance();

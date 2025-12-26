@@ -16,8 +16,8 @@
 
 static void Init() {
   ion::render::Init();
-  // ion::gui::Init(ion::render::GetWindow());
-  // ION_GUI_PREP_CONTEXT();
+  ion::gui::Init(ion::render::GetWindow());
+  ION_GUI_PREP_CONTEXT();
   ion::physics::Init();
   ion::script::Init();
 }
@@ -65,14 +65,14 @@ int main() {
     while (!glfwWindowShouldClose(ion::render::GetWindow())) {
       glfwPollEvents();
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::PRE_UPDATE);
-      // ion::gui::NewFrame();
-      //      ion::dev::ui::RenderInspector(world, defaults, pipeline,
-      //                                    pipeline_settings);
+      ion::gui::NewFrame();
+           ion::dev::ui::RenderInspector(world, defaults, pipeline,
+                                         pipeline_settings);
       ion::systems::UpdateSystems(world, ion::systems::UpdatePhase::UPDATE);
       pipeline.Render(world, pipeline_settings);
       ion::render::UnbindFramebuffer();
       ion::render::Clear();
-      // ion::gui::Render();
+      ion::gui::Render();
       ion::render::Present();
       ion::systems::UpdateSystems(world,
                                   ion::systems::UpdatePhase::LATE_UPDATE);
@@ -83,7 +83,7 @@ int main() {
 
   ion::physics::Quit();
   ion::script::Quit();
+  ion::gui::Quit();
   ion::render::Quit();
-  // ion::gui::Quit();
   return 0;
 }

@@ -20,6 +20,8 @@ VkCommandPool command_pool{};
 std::vector<VkCommandBuffer> command_buffer{};
 std::vector<VkSemaphore> image_available_semaphore{}, render_finished_semaphore{};
 std::vector<VkFence> in_flight_fence{};
+
+VkDescriptorPool descriptor_pool{};
 } // namespace ion::render::api::internal
 
 void ion::render::api::Quit() {
