@@ -10,8 +10,8 @@
 #include <pugixml.hpp>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #define STB_IMAGE_IMPLEMENTATION
+#include "ion/data.h"
 #include "ion/development/id.h"
-#include "ion/gpu_data.h"
 #include "ion/physics.h"
 #include "ion/render.h"
 #include "ion/save_keys.h"
@@ -20,7 +20,7 @@
 namespace ion::res::internal {
 ION_API std::map<std::string, std::shared_ptr<Texture>> textures;
 ION_API std::map<std::string, std::shared_ptr<Shader>> shaders;
-ION_API std::map<std::string, std::shared_ptr<GPUData>> gpu_datas;
+ION_API std::map<std::string, std::shared_ptr<Data>> datas;
 ION_API std::map<std::string, std::shared_ptr<World>> worlds;
 ION_API std::map<std::string, std::shared_ptr<void>> custom_assets;
 ION_API std::filesystem::path project_root;
@@ -72,7 +72,7 @@ static void ProcessWorldManifest(std::shared_ptr<World> world) {
           renderable_node.attribute(ION_SAVE_RENDERABLE_NORMAL).as_string());
       renderable->shader = ion::res::LoadAsset<Shader>(
           renderable_node.attribute(ION_SAVE_RENDERABLE_SHADER).as_string());
-      renderable->data = ion::res::LoadAsset<GPUData>(
+      renderable->data = ion::res::LoadAsset<Data>(
           renderable_node.attribute(ION_SAVE_RENDERABLE_GPU_DATA).as_string());
     } else if (type == ION_SAVE_PHYSICS_BODY_KEY) {
       auto physics_body = world->NewComponent<PhysicsBody>(id);
@@ -102,43 +102,6 @@ static void ProcessWorldManifest(std::shared_ptr<World> world) {
       auto camera = world->NewComponent<Camera>(id);
     }
   }
-}
-static DataType StringToDataType(std::string_view str) {
-  static const std::map<std::string, DataType> type_map = {
-      {"INT", DataType::INT},
-      {"UINT", DataType::UNSIGNED_INT},
-      {"FLOAT", DataType::FLOAT}};
-  auto it = type_map.find(str.data());
-  return it != type_map.end() ? it->second : DataType::FLOAT;
-}
-static DataDescriptor LoadGPUDataManifest(std::filesystem::path path) {
-  if (!std::filesystem::exists(path)) {
-    printf("GPUData manifest does not exist: %s\n", path.string().c_str());
-    return {};
-  }
-  auto doc = pugi::xml_document{};
-  doc.load_file(path.c_str());
-  auto root = doc.child("GPUData");
-  DataDescriptor descriptor{};
-  for (auto pointer_node : root.children("AttributePointer")) {
-    AttributePointer pointer{};
-    pointer.size = pointer_node.attribute("size").as_int();
-    pointer.type = StringToDataType(pointer_node.attribute("type").as_string());
-    pointer.normalized = pointer_node.attribute("normalized").as_bool();
-    pointer.stride =
-        static_cast<size_t>(pointer_node.attribute("stride").as_ullong());
-    pointer.pointer = reinterpret_cast<const void *>(
-        pointer_node.attribute("pointer").as_ullong());
-    descriptor.pointers.push_back(pointer);
-  }
-  descriptor.element_enabled = root.attribute("element_enabled").as_bool();
-  for (auto vertex_node : root.child("vertices").children("vertex")) {
-    descriptor.vertices.push_back(vertex_node.attribute("val").as_float());
-  }
-  for (auto index_node : root.child("indices").children("index")) {
-    descriptor.indices.push_back(index_node.attribute("val").as_uint());
-  }
-  return descriptor;
 }
 
 ION_API bool ion::res::CheckApplicationStructure() {
@@ -356,8 +319,8 @@ ion::res::LoadAsset<Shader>(std::filesystem::path source_path, bool is_hash) {
   return shader;
 }
 template <>
-ION_API std::shared_ptr<GPUData>
-ion::res::LoadAsset<GPUData>(std::filesystem::path path, bool is_hash) {
+ION_API std::shared_ptr<Data>
+ion::res::LoadAsset<Data>(std::filesystem::path path, bool is_hash) {
   if (!is_hash) {
     if (!std::filesystem::exists(path)) {
       printf("GPUData manifest does not exist: %s\n", path.string().c_str());
@@ -372,48 +335,31 @@ ion::res::LoadAsset<GPUData>(std::filesystem::path path, bool is_hash) {
           std::filesystem::copy_options::update_existing);
     }
     path = GetProjectRoot() / id;
-    auto gpu_data = std::make_shared<GPUData>(LoadGPUDataManifest(path), id);
-    ion::render::ConfigureData(gpu_data);
-    internal::gpu_datas.insert({id, gpu_data});
-    return gpu_data;
+    auto data = std::make_shared<Data>(id);
+    internal::datas.insert({id, data});
+    return data;
   }
-  auto gpu_data = std::make_shared<GPUData>(
-      LoadGPUDataManifest(GetProjectRoot() / path), path.filename().string());
-  ion::render::ConfigureData(gpu_data);
-  internal::gpu_datas.insert({path.filename().string(), gpu_data});
-  return gpu_data;
+  auto data = std::make_shared<Data>(path.filename().string());
+  internal::datas.insert({path.filename().string(), data});
+  return data;
 }
 template <>
 ION_API void ion::res::SaveAsset(std::filesystem::path path,
-                                 std::shared_ptr<GPUData> asset) {
+                                 std::shared_ptr<Data> asset) {
   auto doc = pugi::xml_document();
-  auto root = doc.append_child("GPUData");
-  root.append_attribute("element_enabled") = asset->element_enabled;
-  for (const auto &pointer : asset->GetDescriptor().pointers) {
-    auto pointer_node = root.append_child("AttributePointer");
-    pointer_node.append_attribute("size") = pointer.size;
-    std::string type_str;
-    if (pointer.type == DataType::INT) {
-      type_str = "INT";
-    } else if (pointer.type == DataType::UNSIGNED_INT) {
-      type_str = "UINT";
-    } else if (pointer.type == DataType::FLOAT) {
-      type_str = "FLOAT";
-    }
-    pointer_node.append_attribute("type") = type_str.c_str();
-    pointer_node.append_attribute("normalized") = pointer.normalized;
-    pointer_node.append_attribute("stride") =
-        static_cast<unsigned long long>(pointer.stride);
-    pointer_node.append_attribute("pointer") =
-        reinterpret_cast<unsigned long long>(pointer.pointer);
-  }
+  auto root = doc.append_child("Data");
   auto vertices_node = root.append_child("vertices");
-  for (const auto &vertex : asset->GetDescriptor().vertices) {
+  for (const auto &vertex : asset->vertices) {
     auto vertex_node = vertices_node.append_child("vertex");
-    vertex_node.append_attribute("val") = vertex;
+    vertex_node.append_attribute("val_x") = vertex.position.x;
+    vertex_node.append_attribute("val_y") = vertex.position.y;
+    vertex_node.append_attribute("val_z") = vertex.position.z;
+    vertex_node.append_attribute("val_r") = vertex.color.r;
+    vertex_node.append_attribute("val_g") = vertex.color.g;
+    vertex_node.append_attribute("val_b") = vertex.color.b;
   }
   auto indices_node = root.append_child("indices");
-  for (const auto &index : asset->GetDescriptor().indices) {
+  for (const auto &index : asset->indices) {
     auto index_node = indices_node.append_child("index");
     index_node.append_attribute("val") = index;
   }

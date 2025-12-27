@@ -67,6 +67,7 @@ int ion::render::Init() {
   api::CreatePipeline();
   api::CreateFramebuffers();
   api::CreateCommandPool();
+  api::CreateVertexBuffer(api::internal::vertices);
   api::CreateCommandBuffer();
   api::CreateSyncObjects();
 
@@ -84,28 +85,6 @@ glm::vec3 ion::render::GetClearColor() { return r_config.clear_color; }
 void ion::render::SetClearColor(glm::vec3 color) {
   r_config.clear_color = color;
 }
-
-void ion::render::ConfigureData(std::shared_ptr<GPUData> gpu_data) {
-  auto desc = gpu_data->GetDescriptor();
-  gpu_data->element_enabled = desc.element_enabled;
-  if (gpu_data->element_enabled) {
-  }
-  if (gpu_data->element_enabled) {
-  }
-  for (int i = 0; i < desc.pointers.size(); i++) {
-    auto &pointer_data = desc.pointers[i];
-  }
-  UnbindData();
-}
-void ion::render::DestroyData(std::shared_ptr<GPUData> data) {
-  if (data->element_enabled) {
-  }
-}
-void ion::render::BindData(std::shared_ptr<GPUData> data) {
-  if (data->element_enabled) {
-  }
-}
-void ion::render::UnbindData() {}
 
 unsigned int ion::render::ConfigureTexture(const TextureInfo &texture_info) {
   unsigned int texture = 0;
@@ -134,18 +113,13 @@ void ion::render::UnbindFramebuffer() {}
 
 void ion::render::DrawFramebuffer(std::shared_ptr<Framebuffer> framebuffer,
                                   std::shared_ptr<Shader> shader,
-                                  std::shared_ptr<GPUData> quad,
+                                  std::shared_ptr<Data> quad,
                                   std::shared_ptr<Framebuffer> final_buffer) {
   if (final_buffer) {
   } else {
   }
   shader->Use();
-  BindData(quad);
   shader->SetUniform("screen_texture", 0);
-  if (quad->element_enabled) {
-  } else {
-  }
-  UnbindData();
 }
 const std::map<std::shared_ptr<Framebuffer>, std::string> &
 ion::render::GetFramebuffers() {
@@ -180,7 +154,6 @@ void ion::render::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
             !renderable->normal) {
           continue;
         }
-        BindData(renderable->data);
         renderable->shader->Use();
         renderable->shader->SetUniform("layer", transform->layer);
         renderable->shader->SetUniform("view", view);
@@ -191,7 +164,6 @@ void ion::render::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
         } else if (pass == RENDER_PASS_NORMAL) {
         }
         renderable->shader->SetUniform("sample", 0);
-        UnbindData();
       }
     }
   }
@@ -199,22 +171,17 @@ void ion::render::DrawWorld(std::shared_ptr<World> world, RenderPass pass) {
 void ion::render::RunPass(std::shared_ptr<Framebuffer> in,
                           std::shared_ptr<Framebuffer> out,
                           std::shared_ptr<Shader> shader,
-                          std::shared_ptr<GPUData> quad) {
+                          std::shared_ptr<Data> quad) {
   BindFramebuffer(out);
   shader->SetUniform("ION_PASS_IN", 0);
   BindTexture(in, 0);
-  BindData(quad);
-  if (quad->element_enabled) {
-  } else {
-  }
-  UnbindData();
 }
 
 void ion::render::Clear() {}
 void ion::render::Clear(glm::vec4 color) {}
 int ion::render::Render(std::shared_ptr<Framebuffer> color_fb,
                         std::shared_ptr<Framebuffer> normal_fb,
-                        std::shared_ptr<GPUData> quad,
+                        std::shared_ptr<Data> quad,
                         std::shared_ptr<Shader> shader,
                         std::shared_ptr<World> world) {
   shader->Use();
@@ -257,8 +224,6 @@ int ion::render::Render(std::shared_ptr<Framebuffer> color_fb,
     shader->SetUniform("lights[" + std::to_string(i) + "].volumetric_intensity",
                        light->volumetric_intensity);
   }
-  BindData(quad);
-  UnbindData();
   return 0;
 }
 int ion::render::Quit() {

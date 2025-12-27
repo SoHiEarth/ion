@@ -1,7 +1,7 @@
 #include "ion/render/api.h"
+#include <imgui_impl_vulkan.h>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
-#include <imgui_impl_vulkan.h>
 
 uint32_t current_rendering_frame = 0;
 
@@ -91,7 +91,10 @@ void ion::render::api::RecordCommandBuffer(VkCommandBuffer buffer,
   scissor.extent = internal::swapchain_extent;
   vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-  vkCmdDraw(buffer, 3, 1, 0, 0);
+  VkBuffer vertex_buffers[] = {internal::vertex_buffer};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(buffer, 0, 1, vertex_buffers, offsets);
+  vkCmdDraw(buffer, static_cast<uint32_t>(internal::vertices.size()), 1, 0, 0);
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buffer);
 
@@ -102,35 +105,43 @@ void ion::render::api::RecordCommandBuffer(VkCommandBuffer buffer,
 }
 
 void ion::render::api::Render() {
-  vkWaitForFences(internal::device, 1, &internal::in_flight_fence[current_rendering_frame], VK_TRUE,
+  vkWaitForFences(internal::device, 1,
+                  &internal::in_flight_fence[current_rendering_frame], VK_TRUE,
                   UINT64_MAX);
-  vkResetFences(internal::device, 1, &internal::in_flight_fence[current_rendering_frame]);
+  vkResetFences(internal::device, 1,
+                &internal::in_flight_fence[current_rendering_frame]);
 
   uint32_t image_index;
-  vkAcquireNextImageKHR(internal::device, internal::swapchain, UINT64_MAX,
-                        internal::image_available_semaphore[current_rendering_frame], VK_NULL_HANDLE,
-                        &image_index);
+  vkAcquireNextImageKHR(
+      internal::device, internal::swapchain, UINT64_MAX,
+      internal::image_available_semaphore[current_rendering_frame],
+      VK_NULL_HANDLE, &image_index);
   vkResetCommandBuffer(internal::command_buffer[current_rendering_frame], 0);
-  RecordCommandBuffer(internal::command_buffer[current_rendering_frame], image_index);
+  RecordCommandBuffer(internal::command_buffer[current_rendering_frame],
+                      image_index);
 
   auto submit_info = VkSubmitInfo{};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore wait_semaphores[] = {internal::image_available_semaphore[current_rendering_frame] };
+  VkSemaphore wait_semaphores[] = {
+      internal::image_available_semaphore[current_rendering_frame]};
   VkPipelineStageFlags wait_stages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submit_info.waitSemaphoreCount = 1;
   submit_info.pWaitSemaphores = wait_semaphores;
   submit_info.pWaitDstStageMask = wait_stages;
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &internal::command_buffer[current_rendering_frame];
+  submit_info.pCommandBuffers =
+      &internal::command_buffer[current_rendering_frame];
 
-  VkSemaphore signal_semaphores[] = {internal::render_finished_semaphore[current_rendering_frame] };
+  VkSemaphore signal_semaphores[] = {
+      internal::render_finished_semaphore[current_rendering_frame]};
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = signal_semaphores;
 
   if (vkQueueSubmit(internal::graphics_queue, 1, &submit_info,
-                    internal::in_flight_fence[current_rendering_frame]) != VK_SUCCESS) {
+                    internal::in_flight_fence[current_rendering_frame]) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to submit draw command buffer");
   }
 
@@ -144,5 +155,6 @@ void ion::render::api::Render() {
   present_info.pImageIndices = &image_index;
   present_info.pResults = nullptr;
   vkQueuePresentKHR(internal::present_queue, &present_info);
-  current_rendering_frame = (current_rendering_frame + 1) % internal::max_frames_in_flight;
+  current_rendering_frame =
+      (current_rendering_frame + 1) % internal::max_frames_in_flight;
 }

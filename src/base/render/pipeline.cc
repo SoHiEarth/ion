@@ -1,3 +1,4 @@
+#include "ion/data.h"
 #include "ion/render/api.h"
 #include <fstream>
 #include <stdexcept>
@@ -49,10 +50,13 @@ void ion::render::api::CreatePipeline() {
 
   auto input_info = VkPipelineVertexInputStateCreateInfo{};
   input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  input_info.vertexBindingDescriptionCount = 0;
-  input_info.pVertexBindingDescriptions = nullptr;
-  input_info.vertexAttributeDescriptionCount = 0;
-  input_info.pVertexAttributeDescriptions = nullptr;
+  auto binding_description = Vertex::GetBindingDescription();
+  auto attribute_description = Vertex::GetAttributeDescriptions();
+  input_info.vertexBindingDescriptionCount = 1;
+  input_info.pVertexBindingDescriptions = &binding_description;
+  input_info.vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(attribute_description.size());
+  input_info.pVertexAttributeDescriptions = attribute_description.data();
 
   auto input_assembly = VkPipelineInputAssemblyStateCreateInfo{};
   input_assembly.sType =

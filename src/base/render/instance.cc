@@ -12,6 +12,15 @@ bool CheckValidationLayerSupport() {
   auto available_layers = std::vector<VkLayerProperties>{layer_count};
   vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 
+#ifndef NDEBUG
+  printf("Available Layers:\n");
+  for (const auto &layer : available_layers) {
+    printf("\tLayer Name: %s (IMPL: %d, SPEC: %d)\n\t\tDescription: %s\n",
+           layer.layerName, layer.implementationVersion, layer.specVersion,
+           layer.description);
+  }
+#endif
+
   for (auto name : ion::render::api::internal::validation_layers) {
     bool layer_found = false;
     for (const auto &properties : available_layers) {
@@ -23,7 +32,6 @@ bool CheckValidationLayerSupport() {
     if (!layer_found) {
       return false;
     }
-    return false;
   }
   return true;
 }

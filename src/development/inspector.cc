@@ -271,13 +271,13 @@ static void WorldInspector(std::shared_ptr<World> &world, Defaults &defaults) {
             }
             ImGui::EndDragDropTarget();
           }
-          ImGui::Text("GPU Data: %s", renderable->data ? "Loaded" : "None");
+          ImGui::Text("Data: %s", renderable->data ? "Loaded" : "None");
           if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload *payload =
-                    ImGui::AcceptDragDropPayload("GPU_DATA_ASSET")) {
-              IM_ASSERT(payload->DataSize == sizeof(std::shared_ptr<GPUData>));
-              std::shared_ptr<GPUData> dropped_data =
-                  *(std::shared_ptr<GPUData> *)payload->Data;
+                    ImGui::AcceptDragDropPayload("DATA_ASSET")) {
+              IM_ASSERT(payload->DataSize == sizeof(std::shared_ptr<Data>));
+              std::shared_ptr<Data> dropped_data =
+                  *(std::shared_ptr<Data> *)payload->Data;
               renderable->data = dropped_data;
             }
             ImGui::EndDragDropTarget();
@@ -418,15 +418,14 @@ static void AssetInspector(std::shared_ptr<World> &world) {
     auto file_char = tinyfd_openFileDialog("Load GPU Data", nullptr, 0, nullptr,
                                            nullptr, false);
     if (file_char) {
-      ion::res::LoadAsset<GPUData>(std::filesystem::path(file_char), false);
+      ion::res::LoadAsset<Data>(std::filesystem::path(file_char), false);
     }
   }
-  for (const auto &[id, gpu_data] : ion::res::GetGPUData()) {
-    ImGui::Text("GPU Data: %s", id.c_str());
+  for (const auto &[id, gpu_data] : ion::res::GetData()) {
+    ImGui::Text("Data: %s", id.c_str());
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
-      ImGui::SetDragDropPayload("GPU_DATA_ASSET",
-                                &ion::res::GetGPUData().at(id),
-                                sizeof(std::shared_ptr<GPUData> &));
+      ImGui::SetDragDropPayload("DATA_ASSET", &ion::res::GetData().at(id),
+                                sizeof(std::shared_ptr<Data> &));
       ImGui::EndDragDropSource();
     }
   }

@@ -1,4 +1,5 @@
 #pragma once
+#include "ion/data.h"
 #include <cstdio>
 #include <optional>
 #include <vector>
@@ -18,6 +19,12 @@ struct SwapchainSupportInfo {
 
 namespace internal {
 const int max_frames_in_flight = 2;
+
+// TEMP
+static std::vector<Vertex> vertices = {
+    {{0.0f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}};
 
 #ifdef NDEBUG
 static const bool enable_validation_layers = false;
@@ -41,6 +48,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 SwapchainSupportInfo QuerySwapchainSupport(VkPhysicalDevice device);
 
+extern VkAllocationCallbacks *allocator;
 extern VkInstance instance;
 extern VkDebugUtilsMessengerEXT messenger;
 extern VkPhysicalDevice physical_device;
@@ -58,9 +66,11 @@ extern VkPipeline graphics_pipeline;
 extern std::vector<VkFramebuffer> swapchain_framebuffers;
 extern VkCommandPool command_pool;
 extern std::vector<VkCommandBuffer> command_buffer;
-extern std::vector<VkSemaphore> image_available_semaphore, render_finished_semaphore;
+extern std::vector<VkSemaphore> image_available_semaphore,
+    render_finished_semaphore;
 extern std::vector<VkFence> in_flight_fence;
-
+extern VkBuffer vertex_buffer;
+extern VkDeviceMemory vertex_buffer_memory;
 extern VkDescriptorPool descriptor_pool;
 } // namespace internal
 
@@ -73,9 +83,10 @@ void CreateImageViews();
 void CreatePipeline();
 void CreateRenderPass();
 void CreateFramebuffers();
-void CreateSyncObjects();
 void CreateCommandPool();
+void CreateVertexBuffer(const std::vector<Vertex> &vertices);
 void CreateCommandBuffer();
+void CreateSyncObjects();
 
 void RecordCommandBuffer(VkCommandBuffer, uint32_t);
 void Render();

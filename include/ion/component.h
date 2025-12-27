@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "ion/data.h"
 #include <box2d/box2d.h>
 #include <glm/glm.hpp>
 #include <map>
@@ -8,7 +9,6 @@
 
 struct Texture;
 struct Shader;
-struct GPUData;
 
 enum class LightType : std::uint8_t { GLOBAL = 0, POINT = 1 };
 struct ION_API Transform {
@@ -27,7 +27,7 @@ struct ION_API Renderable {
   std::shared_ptr<Texture> color = nullptr;
   std::shared_ptr<Texture> normal = nullptr;
   std::shared_ptr<Shader> shader = nullptr;
-  std::shared_ptr<GPUData> data = nullptr;
+  std::shared_ptr<Data> data = nullptr;
 };
 
 struct ION_API Light {

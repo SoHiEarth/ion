@@ -26,7 +26,7 @@ BasePipeline::BasePipeline() {
       ion::res::LoadAsset<Shader>("assets/bloom_combine_shader", false);
   tonemap_shader = ion::res::LoadAsset<Shader>("assets/tonemap_shader", false);
 
-  screen_data = ion::res::LoadAsset<GPUData>("assets/screen_quad", false);
+  screen_data = ion::res::LoadAsset<Data>("assets/screen_quad", false);
 }
 
 void BasePipeline::Render(std::shared_ptr<World> world,

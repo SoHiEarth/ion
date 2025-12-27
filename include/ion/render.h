@@ -1,7 +1,7 @@
 #pragma once
-#include "component.h"
-#include "exports.h"
-#include "gpu_data.h"
+#include "ion/component.h"
+#include "ion/data.h"
+#include "ion/exports.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <map>
@@ -49,12 +49,6 @@ int GetRenderScale();
 void SetRenderScale(int scale);
 glm::vec3 GetClearColor();
 void SetClearColor(glm::vec3 color);
-
-void ConfigureData(std::shared_ptr<GPUData>);
-void DestroyData(std::shared_ptr<GPUData>);
-void BindData(std::shared_ptr<GPUData>);
-void UnbindData();
-
 unsigned int ConfigureTexture(const TextureInfo &texture_info);
 
 std::shared_ptr<Framebuffer> CreateFramebuffer(const FramebufferInfo &);
@@ -62,7 +56,7 @@ void UpdateFramebuffers();
 void BindFramebuffer(std::shared_ptr<Framebuffer>);
 void UnbindFramebuffer();
 void DrawFramebuffer(std::shared_ptr<Framebuffer>, std::shared_ptr<Shader>,
-                     std::shared_ptr<GPUData> quad,
+                     std::shared_ptr<Data> quad,
                      std::shared_ptr<Framebuffer> = nullptr);
 const std::map<std::shared_ptr<Framebuffer>, std::string> &GetFramebuffers();
 
@@ -74,12 +68,12 @@ void DestroyShader(std::shared_ptr<Shader>);
 
 void DrawWorld(std::shared_ptr<World>, RenderPass);
 void RunPass(std::shared_ptr<Framebuffer> in, std::shared_ptr<Framebuffer> out,
-             std::shared_ptr<Shader> shader, std::shared_ptr<GPUData> quad);
+             std::shared_ptr<Shader> shader, std::shared_ptr<Data> quad);
 
 void Clear();
 void Clear(glm::vec4);
 int Render(std::shared_ptr<Framebuffer> color,
-           std::shared_ptr<Framebuffer> normal, std::shared_ptr<GPUData> data,
+           std::shared_ptr<Framebuffer> normal, std::shared_ptr<Data> data,
            std::shared_ptr<Shader> shader, std::shared_ptr<World> world);
 void Present();
 int Quit();

@@ -19,6 +19,7 @@ target_compile_definitions(ion-base PRIVATE ION_BUILD_VERSION="${PROJECT_VERSION
 target_sources(ion-base PRIVATE
   src/base/assets.cc
   src/base/base_pipeline.cc
+  src/base/data.cc
   src/base/defaults.cc
   src/base/shader.cc
   src/base/script.cc
@@ -29,6 +30,7 @@ target_sources(ion-base PRIVATE
   src/base/world.cc
   src/development/id.cc
   src/base/render/api.cc
+  src/base/render/buffer.cc
   src/base/render/command.cc
   src/base/render/debug.cc
   src/base/render/devices.cc

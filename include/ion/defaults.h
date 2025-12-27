@@ -7,6 +7,6 @@ public:
   std::shared_ptr<struct Texture> default_color;
   std::shared_ptr<struct Texture> default_normal;
   std::shared_ptr<struct Shader> default_shader;
-  std::shared_ptr<struct GPUData> default_data;
+  std::shared_ptr<struct Data> default_data;
   Defaults();
 };

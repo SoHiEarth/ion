@@ -2,7 +2,7 @@
 #include <memory>
 struct Framebuffer;
 struct Shader;
-struct GPUData;
+struct Data;
 struct World;
 
 struct PipelineSettings {
@@ -18,7 +18,7 @@ struct BasePipeline {
   std::shared_ptr<Framebuffer> bloom_buffer;
   std::shared_ptr<Framebuffer> bloom_buffer_2;
 
-	std::shared_ptr<Framebuffer> output_buffer;
+  std::shared_ptr<Framebuffer> output_buffer;
 
   std::shared_ptr<Shader> deferred_shader;
   std::shared_ptr<Shader> screen_shader;
@@ -27,7 +27,7 @@ struct BasePipeline {
   std::shared_ptr<Shader> combine_shader;
   std::shared_ptr<Shader> tonemap_shader;
 
-  std::shared_ptr<GPUData> screen_data;
+  std::shared_ptr<Data> screen_data;
 
   void Render(std::shared_ptr<World> world, const PipelineSettings &settings);
   BasePipeline();

@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "ion/data.h"
 #include "world.h"
 #include <map>
 #include <memory>
@@ -13,7 +14,7 @@ namespace res {
 namespace internal {
 ION_API extern std::map<std::string, std::shared_ptr<Texture>> textures;
 ION_API extern std::map<std::string, std::shared_ptr<Shader>> shaders;
-ION_API extern std::map<std::string, std::shared_ptr<GPUData>> gpu_datas;
+ION_API extern std::map<std::string, std::shared_ptr<Data>> datas;
 ION_API extern std::map<std::string, std::shared_ptr<World>> worlds;
 ION_API extern std::map<std::string, std::shared_ptr<void>> custom_assets;
 ION_API extern std::filesystem::path project_root;
@@ -24,8 +25,8 @@ inline std::map<std::string, std::shared_ptr<Texture>> &GetTextures() {
 inline std::map<std::string, std::shared_ptr<Shader>> &GetShaders() {
   return internal::shaders;
 }
-inline std::map<std::string, std::shared_ptr<GPUData>> &GetGPUData() {
-  return internal::gpu_datas;
+inline std::map<std::string, std::shared_ptr<Data>> &GetData() {
+  return internal::datas;
 }
 inline std::map<std::string, std::shared_ptr<World>> &GetWorlds() {
   return internal::worlds;
@@ -62,10 +63,10 @@ template <>
 ION_API std::shared_ptr<Shader> LoadAsset<Shader>(std::filesystem::path path,
                                                   bool is_hash);
 template <>
-ION_API std::shared_ptr<GPUData> LoadAsset<GPUData>(std::filesystem::path path,
-                                                    bool is_hash);
+ION_API std::shared_ptr<Data> LoadAsset<Data>(std::filesystem::path path,
+                                              bool is_hash);
 template <>
-ION_API void SaveAsset<GPUData>(std::filesystem::path path,
-                                std::shared_ptr<GPUData> asset);
+ION_API void SaveAsset<Data>(std::filesystem::path path,
+                             std::shared_ptr<Data> asset);
 } // namespace res
 } // namespace ion
