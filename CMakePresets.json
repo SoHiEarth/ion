@@ -9,7 +9,6 @@
     {
       "name": "ninja-multi-vcpkg",
       "displayName": "Ninja Multi-Config",
-      "description": "vcpkg + cmake + ninja",
       "binaryDir": "${sourceDir}/builds/${presetName}",
       "generator": "Ninja Multi-Config",
       "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -20,14 +19,12 @@
       "name": "debug",
       "configurePreset": "ninja-multi-vcpkg",
       "displayName": "Build (Debug)",
-      "description": "Build with Ninja (Debug)",
       "configuration": "Debug"
     },
     {
       "name": "release",
       "configurePreset": "ninja-multi-vcpkg",
       "displayName": "Build (Release)",
-      "description": "Build with Ninja (Release)",
       "configuration": "Release"
     }
   ]

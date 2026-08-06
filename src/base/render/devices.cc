@@ -75,6 +75,7 @@ ion::render::api::internal::QuerySwapchainSupport(VkPhysicalDevice device) {
 }
 
 int RateDevice(VkPhysicalDevice device) {
+  std::vector<std::string> reset_reasons{};
   auto properties = VkPhysicalDeviceProperties{};
   vkGetPhysicalDeviceProperties(device, &properties);
   auto features = VkPhysicalDeviceFeatures{};
@@ -84,15 +85,16 @@ int RateDevice(VkPhysicalDevice device) {
   int score = 0;
   if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     score += 1000;
+  } else if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+    score += 500;
   }
   score += properties.limits.maxImageDimension2D;
-  if (!features.geometryShader) {
-    return 0;
-  }
 
   if (!indices.graphics_family.has_value() ||
       !indices.present_family.has_value()) {
-    return 0;
+    score = 0;
+    reset_reasons.push_back(
+        "Device does not support either/both graphics family/present family.");
   }
 
   bool swapchain_supported = false;
@@ -103,7 +105,17 @@ int RateDevice(VkPhysicalDevice device) {
         !support_info.formats.empty() && !support_info.present_modes.empty();
   }
   if (!swapchain_supported) {
-    return 0;
+    score = 0;
+    reset_reasons.push_back("Device does not support swapchains.");
+  }
+
+  printf("Discovered device: %s (%d), score: %d\n", properties.deviceName,
+         properties.driverVersion, score);
+  if (!reset_reasons.empty()) {
+    printf("Reset Reasons:\n");
+    for (auto s : reset_reasons) {
+      printf("\t- %s\n", s.c_str());
+    }
   }
 
   return score;
@@ -153,13 +165,7 @@ void ion::render::api::CreateDevice() {
       static_cast<uint32_t>(internal::device_extensions.size());
   info.ppEnabledExtensionNames = internal::device_extensions.data();
 
-  if (internal::enable_validation_layers && !internal::using_fallback_layer) {
-    info.enabledLayerCount =
-        static_cast<uint32_t>(internal::validation_layers.size());
-    info.ppEnabledLayerNames = internal::validation_layers.data();
-  } else {
-    info.enabledLayerCount = 0;
-  }
+  info.enabledLayerCount = 0;
 
   if (vkCreateDevice(internal::physical_device, &info, nullptr,
                      &internal::device) != VK_SUCCESS) {
